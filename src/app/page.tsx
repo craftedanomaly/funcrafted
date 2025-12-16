@@ -1,65 +1,147 @@
-import Image from "next/image";
+"use client";
+
+import { motion } from "framer-motion";
+import { Brain, Clapperboard, Eye, Sparkles } from "lucide-react";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { GameCard } from "@/components/GameCard";
+
+const games = [
+  {
+    title: "Who Am I?",
+    description:
+      "A classic guessing game powered by AI. Can you figure out who or what you are?",
+    href: "/who-am-i",
+    icon: Brain,
+    gradient: "from-[#2EA7F2] to-[#76D95B]",
+    size: "large" as const,
+  },
+  {
+    title: "AI Logline Creator",
+    description:
+      "Spin the slots, get random elements, and let AI create a hilarious movie logline for you!",
+    href: "/logline-slots",
+    icon: Clapperboard,
+    gradient: "from-[#F2CD13] to-[#F2695C]",
+    size: "normal" as const,
+  },
+  {
+    title: "AI or Not?",
+    description:
+      "Test your skills! Can you tell the difference between AI-generated and real images?",
+    href: "/ai-or-not",
+    icon: Eye,
+    gradient: "from-[#76D95B] to-[#96D966]",
+    size: "normal" as const,
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gradient-to-br from-[#2EA7F2]/15 via-white to-[#F2CD13]/15 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <Header />
+
+      <main className="mx-auto max-w-6xl px-4 pb-20 pt-32">
+        {/* Hero Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-16 text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+            className="mb-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#2EA7F2]/20 via-[#76D95B]/20 to-[#F2CD13]/20 px-4 py-2 shadow-sm"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <Sparkles className="h-4 w-4 text-[#2EA7F2]" />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              AI-Powered Fun
+            </span>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mb-4 text-5xl font-bold tracking-tight text-gray-900 dark:text-white md:text-6xl"
+          >
+            Welcome to{" "}
+            <span className="bg-gradient-to-r from-[#2EA7F2] via-[#76D95B] to-[#F2CD13] bg-clip-text text-transparent">
+              fun.crafted
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-400"
+          >
+            A collection of playful AI experiments. Pick a game and let the fun
+            begin!
+          </motion.p>
+        </motion.div>
+
+        {/* Bento Grid */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {games.map((game, index) => (
+            <GameCard
+              key={game.href}
+              {...game}
+              delay={0.5 + index * 0.1}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          ))}
         </div>
+
+        {/* Fun Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="mt-16 grid grid-cols-3 gap-4 rounded-3xl bg-gradient-to-r from-[#2EA7F2]/10 via-[#76D95B]/10 to-[#F2CD13]/10 p-8 backdrop-blur-sm shadow-lg dark:bg-gray-900/50"
+        >
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 1, type: "spring" }}
+              className="text-3xl font-bold text-[#2EA7F2]"
+            >
+              3
+            </motion.div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Games
+            </div>
+          </div>
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 1.1, type: "spring" }}
+              className="text-3xl font-bold text-[#76D95B]"
+            >
+              ∞
+            </motion.div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Fun</div>
+          </div>
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 1.2, type: "spring" }}
+              className="text-3xl font-bold text-[#F2CD13]"
+            >
+              100%
+            </motion.div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              AI Magic
+            </div>
+          </div>
+        </motion.div>
       </main>
+
+      <Footer />
     </div>
   );
 }

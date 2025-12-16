@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# fun.crafted - AI-Powered Games
 
-## Getting Started
+A playful "neil.fun" style web application featuring AI-powered games built with Next.js, Tailwind CSS, and Google Gemini.
 
-First, run the development server:
+🎮 **Live at:** [fun.craftedanomaly.com](https://fun.craftedanomaly.com)
 
+## 🎯 Games
+
+### 1. Who Am I?
+A classic guessing game powered by AI. Choose to either:
+- **Guess Mode:** AI thinks of something, you ask yes/no questions to figure it out
+- **Ask Mode:** You become someone/something, AI tries to guess who you are
+
+### 2. AI Logline Creator
+Spin the slot machine to get random elements (Protagonist + Setting + Goal), then let AI generate a hilarious movie logline! Create a movie poster with your custom title.
+
+### 3. AI or Not?
+Test your skills! Can you tell the difference between AI-generated and real images? Race against the clock with 10 seconds per image.
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+
+- A Google Gemini API Key (free tier works!)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd funcrafted
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create your environment file:
+```bash
+# Create .env.local in the project root
+# Add your Gemini API key:
+GEMINI_API_KEY=your_api_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Add images for "AI or Not?" game:
+   - Place images in `public/ai-or-not/`
+   - Name them: `image1.jpg`, `image2.jpg`, etc.
+   - Update `src/app/ai-or-not/imageConfig.ts` to mark which are AI vs Real
 
-## Learn More
+5. Run the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Open [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Framework:** Next.js 15 (App Router)
+- **Styling:** Tailwind CSS
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **AI:** Google Gemini API
 
-## Deploy on Vercel
+## 📁 Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/
+│   ├── page.tsx              # Landing page with Bento Grid
+│   ├── who-am-i/             # Who Am I? game
+│   ├── logline-slots/        # AI Logline Creator
+│   └── ai-or-not/            # AI or Not? game
+├── components/
+│   ├── Header.tsx
+│   ├── Footer.tsx
+│   ├── GameCard.tsx
+│   └── QuotaErrorOverlay.tsx # Friendly error for rate limits
+└── lib/
+    └── gemini.ts             # Gemini API wrapper with error handling
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ⚠️ API Rate Limits
+
+This app is designed to work with Gemini's free tier. If you hit rate limits:
+- A friendly "brain fried" overlay appears
+- Users are asked to wait and try again
+- No ugly error codes shown!
+
+## 📝 License
+
+MIT
+
+## 🙏 Credits
+
+Made with ❤️ by [Crafted Anomaly](https://craftedanomaly.com)

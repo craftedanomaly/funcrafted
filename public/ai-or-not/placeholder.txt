@@ -1,0 +1,21 @@
+AI OR NOT - Image Setup Instructions
+=====================================
+
+Place your images in this folder with the following naming convention:
+- image1.jpg
+- image2.jpg
+- image3.jpg
+... up to image20.jpg (or more)
+
+Then update the imageConfig.ts file to mark which images are AI-generated (isAI: true) 
+and which are real photos (isAI: false).
+
+Recommended image sources:
+- AI Images: Midjourney, DALL-E, Stable Diffusion outputs
+- Real Images: Unsplash, Pexels, your own photos
+
+Tips for good gameplay:
+- Mix different subjects (people, landscapes, objects, animals)
+- Include some tricky AI images that look very realistic
+- Include some real photos that might look AI-generated
+- Use similar resolution/quality for all images
