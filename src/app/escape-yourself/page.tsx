@@ -131,7 +131,9 @@ function Target({ x, y }: { x: number; y: number }) {
 export default function EscapeYourselfPage() {
   const [phase, setPhase] = useState<GamePhase>("intro");
   const [currentLoop, setCurrentLoop] = useState(1);
+  const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
   
   // Leaderboard state
   const [nickname, setNickname] = useState("");
@@ -144,6 +146,8 @@ export default function EscapeYourselfPage() {
   const animationFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const roundStartTimeRef = useRef<number>(0);
+  const gameStartTimeRef = useRef<number>(0);
+  const scoreRef = useRef<number>(0);
 
   // Player state (refs for performance)
   const playerPosRef = useRef({ x: 0, y: 0 });
@@ -207,11 +211,17 @@ export default function EscapeYourselfPage() {
     ghostsRef.current = [];
     setGhostPositions([]);
     setCurrentLoop(1);
+    setScore(0);
+    scoreRef.current = 0;
+    setElapsedTime(0);
     setHasSubmitted(false);
     setNickname("");
     
-    roundStartTimeRef.current = performance.now();
+    const now = performance.now();
+    roundStartTimeRef.current = now;
+    gameStartTimeRef.current = now;
     lastRecordTimeRef.current = 0;
+    lastSecondRef.current = 0;
     
     spawnTarget();
     setPhase("playing");
@@ -276,6 +286,10 @@ export default function EscapeYourselfPage() {
       });
     }
     
+    // Add score: +20 for completing loop
+    scoreRef.current += 20;
+    setScore(scoreRef.current);
+    
     // Reset for next round
     currentPathRef.current = [];
     roundStartTimeRef.current = performance.now();
@@ -293,7 +307,9 @@ export default function EscapeYourselfPage() {
     setPhase("gameover");
     cancelAnimationFrame(animationFrameRef.current);
     
-    const finalScore = currentLoop - 1;
+    // Final score is already calculated with time penalty
+    const finalScore = Math.max(0, scoreRef.current);
+    setScore(finalScore);
     if (finalScore > highScore) {
       setHighScore(finalScore);
     }
@@ -307,7 +323,7 @@ export default function EscapeYourselfPage() {
         }
       })
       .catch(console.error);
-  }, [currentLoop, highScore]);
+  }, [highScore]);
 
   // Submit score
   const submitScore = async () => {
@@ -318,7 +334,7 @@ export default function EscapeYourselfPage() {
       const res = await fetch("/api/leaderboard/escape-yourself", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname.trim().toUpperCase().slice(0, 3), score: currentLoop - 1 }),
+        body: JSON.stringify({ nickname: nickname.trim().toUpperCase().slice(0, 3), score: score }),
       });
       const data = await res.json();
       if (data.success) {
@@ -338,10 +354,21 @@ export default function EscapeYourselfPage() {
   };
 
   // Main game loop (60fps)
+  const lastSecondRef = useRef<number>(0);
+  
   const gameLoop = useCallback((timestamp: number) => {
     if (phase !== "playing") return;
     
     const elapsed = timestamp - roundStartTimeRef.current;
+    const totalElapsed = timestamp - gameStartTimeRef.current;
+    const currentSecond = Math.floor(totalElapsed / 1000);
+    
+    // Apply -1 score per second
+    if (currentSecond > lastSecondRef.current) {
+      const secondsPassed = currentSecond - lastSecondRef.current;
+      scoreRef.current = Math.max(0, scoreRef.current - secondsPassed);
+      lastSecondRef.current = currentSecond;
+    }
     
     // Update ghost positions
     const newGhostPositions: { id: number; x: number; y: number }[] = [];
@@ -381,6 +408,8 @@ export default function EscapeYourselfPage() {
       setPlayerPos({ ...playerPosRef.current });
       setTrail([...trailRef.current]);
       setGhostPositions(newGhostPositions);
+      setElapsedTime(Math.floor(totalElapsed / 1000));
+      setScore(Math.max(0, scoreRef.current));
       lastTimeRef.current = timestamp;
     }
     
@@ -413,22 +442,34 @@ export default function EscapeYourselfPage() {
           </Link>
         </div>
 
-        {/* Game Container */}
-        <div className="relative w-full max-w-4xl">
+        {/* Game Container - Full Width */}
+        <div className="relative w-full">
           {/* HUD */}
           {phase === "playing" && (
-            <div className="absolute left-4 top-4 z-20 rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
-              <span className="font-mono text-lg text-[#00D9FF]">
-                LOOP: <span className="text-white">{currentLoop}</span>
-              </span>
+            <div className="absolute left-4 top-4 z-20 flex gap-4">
+              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
+                <span className="font-mono text-lg text-[#00D9FF]">
+                  LOOP: <span className="text-white">{currentLoop}</span>
+                </span>
+              </div>
+              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
+                <span className="font-mono text-lg text-[#00FF94]">
+                  SCORE: <span className="text-white">{score}</span>
+                </span>
+              </div>
+              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
+                <span className="font-mono text-lg text-[#FF6B9D]">
+                  TIME: <span className="text-white">{elapsedTime}s</span>
+                </span>
+              </div>
             </div>
           )}
 
-          {/* Game Area */}
+          {/* Game Area - Full Width */}
           <div
             ref={gameAreaRef}
             onMouseMove={handleMouseMove}
-            className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#0D0D0D] to-[#1A1A1A]"
+            className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#0D0D0D] to-[#1A1A1A]"
             style={{ cursor: phase === "playing" ? "none" : "default" }}
           >
             {/* Grid Background */}
@@ -499,9 +540,15 @@ export default function EscapeYourselfPage() {
                     <h2 className="mb-2 text-3xl font-bold text-[#FF4444]">
                       PARADOX CREATED
                     </h2>
-                    <p className="mb-6 text-gray-400">
-                      You survived <span className="text-white font-bold">{currentLoop - 1}</span> loops
-                    </p>
+                    <div className="mb-6 space-y-1">
+                      <p className="text-gray-400">
+                        Loops: <span className="text-white font-bold">{currentLoop - 1}</span>
+                        {" · "}Time: <span className="text-white font-bold">{elapsedTime}s</span>
+                      </p>
+                      <p className="text-2xl font-bold text-[#00FF94]">
+                        SCORE: {score}
+                      </p>
+                    </div>
 
                     {/* Nickname Input */}
                     {!hasSubmitted && (
