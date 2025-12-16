@@ -10,8 +10,10 @@ interface GameCardProps {
   href: string;
   icon: LucideIcon;
   gradient: string;
+  bgColor?: string;
   delay?: number;
   size?: "normal" | "large";
+  badge?: string;
 }
 
 export function GameCard({
@@ -20,8 +22,10 @@ export function GameCard({
   href,
   icon: Icon,
   gradient,
+  bgColor,
   delay = 0,
   size = "normal",
+  badge,
 }: GameCardProps) {
   return (
     <motion.div
@@ -36,10 +40,17 @@ export function GameCard({
           whileTap={{ scale: 0.98 }}
           className={`relative h-full overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-1`}
         >
-          <div className="relative h-full rounded-[22px] bg-white p-6 transition-colors group-hover:bg-gray-50 dark:bg-gray-900 dark:group-hover:bg-gray-800">
+          <div className="relative h-full rounded-[22px] bg-[#1A1A1A] p-6 transition-colors group-hover:bg-[#222]">
+            {/* Badge */}
+            {badge && (
+              <div className="absolute right-4 top-4 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                {badge}
+              </div>
+            )}
+
             {/* Floating icon background */}
             <motion.div
-              className="absolute -right-4 -top-4 opacity-10"
+              className="absolute -right-4 -top-4 opacity-10 text-white"
               animate={{
                 rotate: [0, 10, -10, 0],
                 scale: [1, 1.1, 1],
@@ -62,10 +73,10 @@ export function GameCard({
                 <Icon className="h-6 w-6 text-white" />
               </motion.div>
 
-              <h3 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+              <h3 className="mb-2 text-xl font-bold text-white">
                 {title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-400">
                 {description}
               </p>
 
@@ -80,6 +91,7 @@ export function GameCard({
                   Play Now
                 </span>
                 <motion.span
+                  className="text-white"
                   animate={{ x: [0, 5, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 >

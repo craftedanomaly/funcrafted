@@ -16,6 +16,10 @@ import {
   X,
   CheckCircle,
   AlertCircle,
+  ZoomIn,
+  ZoomOut,
+  Square,
+  CheckSquare,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -144,6 +148,12 @@ export default function AdminAiOrNotPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newIsAI, setNewIsAI] = useState(true);
   const [newSource, setNewSource] = useState("");
+
+  // Gallery view state
+  const [gridSize, setGridSize] = useState<"small" | "medium" | "large">("medium");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [zoomedImage, setZoomedImage] = useState<ImageItem | null>(null);
 
   const getAuthHeader = useCallback(() => {
     return "Basic " + btoa(`${username}:${password}`);
@@ -309,6 +319,67 @@ export default function AdminAiOrNotPage() {
     if (uploadQueue.every((i) => i.status === "success")) {
       setAddMode(null);
     }
+  };
+
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all / deselect all
+  const toggleSelectAll = () => {
+    if (selectedIds.size === images.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(images.map((img) => img.id)));
+    }
+  };
+
+  // Batch delete
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} images?`)) return;
+
+    setIsLoading(true);
+    const idsToDelete = Array.from(selectedIds);
+    
+    for (const id of idsToDelete) {
+      try {
+        const res = await fetch(`/api/admin/ai-or-not?id=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: getAuthHeader() },
+        });
+        const data = await res.json();
+        if (data.success) {
+          setImages((prev) => prev.filter((img) => img.id !== id));
+          setSelectedIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(id);
+            return newSet;
+          });
+        }
+      } catch (error) {
+        console.error("Delete error:", error);
+      }
+    }
+    
+    setIsLoading(false);
+    setIsSelectionMode(false);
+  };
+
+  // Grid size classes
+  const gridClasses = {
+    small: "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6",
+    medium: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+    large: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
   };
 
   // Add link
@@ -677,20 +748,96 @@ export default function AdminAiOrNotPage() {
 
         {/* Image List */}
         <div className="rounded-2xl bg-gray-800 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Images ({images.length})
-          </h2>
+          {/* Header with controls */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold text-white">
+              Images ({images.length})
+              {selectedIds.size > 0 && (
+                <span className="ml-2 text-sm text-gray-400">
+                  ({selectedIds.size} selected)
+                </span>
+              )}
+            </h2>
+
+            <div className="flex items-center gap-2">
+              {/* Grid Size Controls */}
+              <div className="flex items-center gap-1 rounded-lg bg-gray-700 p-1">
+                <button
+                  onClick={() => setGridSize("small")}
+                  className={`rounded p-1.5 ${gridSize === "small" ? "bg-gray-600 text-white" : "text-gray-400 hover:text-white"}`}
+                  title="Small grid"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setGridSize("medium")}
+                  className={`rounded p-1.5 ${gridSize === "medium" ? "bg-gray-600 text-white" : "text-gray-400 hover:text-white"}`}
+                  title="Medium grid"
+                >
+                  <ImageIcon className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setGridSize("large")}
+                  className={`rounded p-1.5 ${gridSize === "large" ? "bg-gray-600 text-white" : "text-gray-400 hover:text-white"}`}
+                  title="Large grid"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Selection Mode Toggle */}
+              <button
+                onClick={() => {
+                  setIsSelectionMode(!isSelectionMode);
+                  if (isSelectionMode) setSelectedIds(new Set());
+                }}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  isSelectionMode
+                    ? "bg-[#FF6B9D] text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+              >
+                {isSelectionMode ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                Select
+              </button>
+
+              {/* Batch Actions */}
+              {isSelectionMode && (
+                <>
+                  <button
+                    onClick={toggleSelectAll}
+                    className="rounded-lg bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-300 hover:bg-gray-600"
+                  >
+                    {selectedIds.size === images.length ? "Deselect All" : "Select All"}
+                  </button>
+                  {selectedIds.size > 0 && (
+                    <button
+                      onClick={handleBatchDelete}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      Delete ({selectedIds.size})
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
 
           {images.length === 0 ? (
             <p className="text-center text-gray-400 py-8">
               No images yet. Add some above!
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={`grid gap-4 ${gridClasses[gridSize]}`}>
               {images.map((img) => (
                 <div
                   key={img.id}
-                  className="overflow-hidden rounded-xl bg-gray-700"
+                  className={`group relative overflow-hidden rounded-xl bg-gray-700 ${
+                    isSelectionMode ? "cursor-pointer" : ""
+                  } ${selectedIds.has(img.id) ? "ring-2 ring-[#FF6B9D]" : ""}`}
+                  onClick={isSelectionMode ? () => toggleSelection(img.id) : undefined}
                 >
                   <div className="relative aspect-square">
                     <Image
@@ -700,79 +847,152 @@ export default function AdminAiOrNotPage() {
                       className="object-cover"
                       unoptimized
                     />
+                    
+                    {/* Selection checkbox overlay */}
+                    {isSelectionMode && (
+                      <div className="absolute left-2 top-2 z-10">
+                        <div className={`flex h-6 w-6 items-center justify-center rounded ${
+                          selectedIds.has(img.id) ? "bg-[#FF6B9D]" : "bg-black/50"
+                        }`}>
+                          {selectedIds.has(img.id) && <CheckCircle className="h-4 w-4 text-white" />}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI/Real badge */}
                     <div
-                      className={`absolute left-2 top-2 rounded-full px-3 py-1 text-xs font-bold text-white ${
+                      className={`absolute ${isSelectionMode ? "left-10" : "left-2"} top-2 rounded-full px-3 py-1 text-xs font-bold text-white ${
                         img.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
                       }`}
                     >
                       {img.isAI ? "AI" : "Real"}
                     </div>
+
+                    {/* Zoom button */}
+                    {!isSelectionMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setZoomedImage(img);
+                        }}
+                        className="absolute right-2 top-2 rounded-lg bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="p-4 space-y-3">
-                    {/* Toggle */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-400">Type:</span>
-                      <button
-                        onClick={() =>
-                          handleUpdateImage(img.id, { isAI: !img.isAI })
-                        }
-                        className={`flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-semibold text-white ${
-                          img.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
-                        }`}
-                      >
-                        {img.isAI ? (
-                          <>
-                            <Bot className="h-4 w-4" /> AI
-                          </>
-                        ) : (
-                          <>
-                            <User className="h-4 w-4" /> Real
-                          </>
-                        )}
-                      </button>
-                    </div>
+                  {/* Only show controls in medium/large view and not in selection mode */}
+                  {gridSize !== "small" && !isSelectionMode && (
+                    <div className="p-4 space-y-3">
+                      {/* Toggle */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-400">Type:</span>
+                        <button
+                          onClick={() => handleUpdateImage(img.id, { isAI: !img.isAI })}
+                          className={`flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-semibold text-white ${
+                            img.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
+                          }`}
+                        >
+                          {img.isAI ? (
+                            <>
+                              <Bot className="h-4 w-4" /> AI
+                            </>
+                          ) : (
+                            <>
+                              <User className="h-4 w-4" /> Real
+                            </>
+                          )}
+                        </button>
+                      </div>
 
-                    {/* Source */}
-                    <div>
-                      <label className="mb-1 block text-xs text-gray-400">
-                        Source:
-                      </label>
-                      <input
-                        type="text"
-                        value={img.source || ""}
-                        onChange={(e) =>
-                          handleUpdateImage(img.id, { source: e.target.value })
-                        }
-                        placeholder="Add source..."
-                        className="w-full rounded-lg bg-gray-600 px-3 py-2 text-sm text-white placeholder-gray-500"
-                      />
-                    </div>
+                      {/* Source */}
+                      <div>
+                        <label className="mb-1 block text-xs text-gray-400">
+                          Source:
+                        </label>
+                        <input
+                          type="text"
+                          defaultValue={img.source || ""}
+                          onBlur={(e) => handleUpdateImage(img.id, { source: e.target.value })}
+                          placeholder="Add source..."
+                          className="w-full rounded-lg bg-gray-600 px-3 py-2 text-sm text-white placeholder-gray-500"
+                        />
+                      </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <a
-                        href={img.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-gray-600 py-2 text-sm text-white hover:bg-gray-500"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        View
-                      </a>
-                      <button
-                        onClick={() => handleDeleteImage(img.id)}
-                        className="flex items-center justify-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setZoomedImage(img)}
+                          className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-gray-600 py-2 text-sm text-white hover:bg-gray-500"
+                        >
+                          <ZoomIn className="h-4 w-4" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDeleteImage(img.id)}
+                          className="flex items-center justify-center gap-1 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Zoom Modal */}
+        <AnimatePresence>
+          {zoomedImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+              onClick={() => setZoomedImage(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                className="relative max-h-[90vh] max-w-[90vw]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Image
+                  src={zoomedImage.url}
+                  alt={zoomedImage.id}
+                  width={1200}
+                  height={1200}
+                  className="max-h-[80vh] w-auto rounded-xl object-contain"
+                  unoptimized
+                />
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`rounded-full px-3 py-1 text-sm font-bold text-white ${
+                      zoomedImage.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
+                    }`}>
+                      {zoomedImage.isAI ? "AI Generated" : "Real Photo"}
+                    </span>
+                    {zoomedImage.source && (
+                      <span className="text-sm text-gray-400">
+                        Source: {zoomedImage.source}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setZoomedImage(null)}
+                    className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
