@@ -38,6 +38,92 @@ interface UploadItem {
   error?: string;
 }
 
+// Separate component to prevent re-renders on every keystroke
+function UploadQueueItem({
+  item,
+  onUpdate,
+  onRemove,
+}: {
+  item: UploadItem;
+  onUpdate: (id: string, updates: Partial<UploadItem>) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [localSource, setLocalSource] = useState(item.source);
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-gray-700 p-3">
+      {/* Preview */}
+      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+        <Image
+          src={item.preview}
+          alt="Preview"
+          fill
+          className="object-cover"
+          unoptimized
+        />
+        {item.status === "uploading" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+          </div>
+        )}
+        {item.status === "success" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-green-500/50">
+            <CheckCircle className="h-6 w-6 text-white" />
+          </div>
+        )}
+        {item.status === "error" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-red-500/50">
+            <AlertCircle className="h-6 w-6 text-white" />
+          </div>
+        )}
+      </div>
+
+      {/* Info & Controls */}
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm text-white">{item.file.name}</p>
+
+        {item.status === "pending" && (
+          <div className="mt-1 flex items-center gap-3">
+            {/* AI Toggle */}
+            <button
+              onClick={() => onUpdate(item.id, { isAI: !item.isAI })}
+              className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold text-white ${
+                item.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
+              }`}
+            >
+              {item.isAI ? <Bot className="h-3 w-3" /> : <User className="h-3 w-3" />}
+              {item.isAI ? "AI" : "Real"}
+            </button>
+            {/* Source Input - uses local state, updates on blur */}
+            <input
+              type="text"
+              value={localSource}
+              onChange={(e) => setLocalSource(e.target.value)}
+              onBlur={() => onUpdate(item.id, { source: localSource })}
+              placeholder="Source..."
+              className="flex-1 rounded bg-gray-600 px-2 py-0.5 text-xs text-white placeholder-gray-500"
+            />
+          </div>
+        )}
+
+        {item.status === "error" && (
+          <p className="mt-1 text-xs text-red-400">{item.error}</p>
+        )}
+      </div>
+
+      {/* Remove Button */}
+      {item.status !== "uploading" && (
+        <button
+          onClick={() => onRemove(item.id)}
+          className="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-600 hover:text-white"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AdminAiOrNotPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
@@ -125,14 +211,18 @@ export default function AdminAiOrNotPage() {
     const fileArray = Array.from(files).filter((f) => f.type.startsWith("image/"));
     if (fileArray.length === 0) return;
 
-    const newItems: UploadItem[] = fileArray.map((file) => ({
-      id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      file,
-      preview: URL.createObjectURL(file),
-      status: "pending" as const,
-      isAI: true,
-      source: "",
-    }));
+    const newItems: UploadItem[] = fileArray.map((file) => {
+      // Extract filename without extension as default source
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+      return {
+        id: `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        preview: URL.createObjectURL(file),
+        status: "pending" as const,
+        isAI: true,
+        source: nameWithoutExt,
+      };
+    });
 
     setUploadQueue((prev) => [...prev, ...newItems]);
     setAddMode("upload");
@@ -463,78 +553,12 @@ export default function AdminAiOrNotPage() {
                 {/* Queue Items */}
                 <div className="max-h-96 space-y-2 overflow-y-auto">
                   {uploadQueue.map((item) => (
-                    <div
+                    <UploadQueueItem
                       key={item.id}
-                      className="flex items-center gap-3 rounded-xl bg-gray-700 p-3"
-                    >
-                      {/* Preview */}
-                      <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-                        <Image
-                          src={item.preview}
-                          alt="Preview"
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                        {item.status === "uploading" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                            <Loader2 className="h-6 w-6 animate-spin text-white" />
-                          </div>
-                        )}
-                        {item.status === "success" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-green-500/50">
-                            <CheckCircle className="h-6 w-6 text-white" />
-                          </div>
-                        )}
-                        {item.status === "error" && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-red-500/50">
-                            <AlertCircle className="h-6 w-6 text-white" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info & Controls */}
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate text-sm text-white">{item.file.name}</p>
-                        
-                        {item.status === "pending" && (
-                          <div className="mt-1 flex items-center gap-3">
-                            {/* AI Toggle */}
-                            <button
-                              onClick={() => updateUploadItem(item.id, { isAI: !item.isAI })}
-                              className={`flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold text-white ${
-                                item.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
-                              }`}
-                            >
-                              {item.isAI ? <Bot className="h-3 w-3" /> : <User className="h-3 w-3" />}
-                              {item.isAI ? "AI" : "Real"}
-                            </button>
-                            {/* Source Input */}
-                            <input
-                              type="text"
-                              value={item.source}
-                              onChange={(e) => updateUploadItem(item.id, { source: e.target.value })}
-                              placeholder="Source..."
-                              className="flex-1 rounded bg-gray-600 px-2 py-0.5 text-xs text-white placeholder-gray-500"
-                            />
-                          </div>
-                        )}
-
-                        {item.status === "error" && (
-                          <p className="mt-1 text-xs text-red-400">{item.error}</p>
-                        )}
-                      </div>
-
-                      {/* Remove Button */}
-                      {item.status !== "uploading" && (
-                        <button
-                          onClick={() => removeFromQueue(item.id)}
-                          className="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-600 hover:text-white"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                      item={item}
+                      onUpdate={updateUploadItem}
+                      onRemove={removeFromQueue}
+                    />
                   ))}
                 </div>
 
