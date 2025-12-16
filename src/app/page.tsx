@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, Clapperboard, Eye, Sparkles, Ghost } from "lucide-react";
+import { Brain, Clapperboard, Eye, Sparkles, Ghost, Clock } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameCard } from "@/components/GameCard";
@@ -48,6 +48,17 @@ const games = [
     bgColor: "bg-[#FF4444]",
     size: "large" as const,
     badge: "New",
+  },
+  {
+    title: "Procrastination Simulator",
+    description:
+      "An interactive art piece. Watch time slip away as you avoid your tasks.",
+    href: "/procrastination-simulator",
+    icon: Clock,
+    gradient: "from-[#6B8E7B] to-[#A0A0A0]",
+    bgColor: "bg-[#6B8E7B]",
+    size: "normal" as const,
+    badge: "Art",
   },
 ];
 
@@ -123,7 +134,7 @@ export default function Home() {
               transition={{ delay: 1, type: "spring" }}
               className="text-3xl font-bold text-[#FF6B9D]"
             >
-              4
+              5
             </motion.div>
             <div className="text-sm text-gray-500">
               Games
