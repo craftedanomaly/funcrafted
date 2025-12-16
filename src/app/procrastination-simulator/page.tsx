@@ -484,25 +484,25 @@ function IsometricRoom({ era, entropy }: { era: Era; entropy: number }) {
   );
 }
 
-// Side Tasks - Left and Right columns
+// Side Tasks - Left and Right columns (positioned relative to room)
 function SideTasks({ side }: { side: "left" | "right" }) {
   const tasks = side === "left" 
-    ? PENDING_TASKS.slice(0, 8) 
-    : PENDING_TASKS.slice(7, 15);
+    ? PENDING_TASKS.slice(0, 6) 
+    : PENDING_TASKS.slice(6, 12);
   
   return (
-    <div className={`absolute top-32 ${side === "left" ? "left-4" : "right-4"} w-40 pointer-events-none`}>
-      <div className="text-xs text-[#505050] font-mono mb-2 uppercase tracking-wider">
+    <div className={`absolute ${side === "left" ? "-left-44" : "-right-44"} top-4 w-40 pointer-events-none`}>
+      <div className="text-[10px] text-[#505050] font-mono mb-1 uppercase tracking-wider">
         {side === "left" ? "Should do:" : "Also pending:"}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {tasks.map((task, i) => (
           <motion.div
             key={task}
-            initial={{ opacity: 0, x: side === "left" ? -20 : 20 }}
-            animate={{ opacity: 0.4, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="text-xs text-[#606060] font-mono truncate"
+            initial={{ opacity: 0, x: side === "left" ? -10 : 10 }}
+            animate={{ opacity: 0.5, x: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="text-[10px] text-[#606060] font-mono truncate"
           >
             • {task}
           </motion.div>
@@ -512,9 +512,9 @@ function SideTasks({ side }: { side: "left" | "right" }) {
   );
 }
 
-// Floating Events - more visible, random positions
+// Floating Events - positioned below the room
 function FloatingEvents({ currentEvent }: { currentEvent: string | null }) {
-  const [events, setEvents] = useState<{ id: number; text: string; x: number; y: number }[]>([]);
+  const [events, setEvents] = useState<{ id: number; text: string; x: number }[]>([]);
   const eventIdRef = useRef(0);
 
   useEffect(() => {
@@ -523,24 +523,23 @@ function FloatingEvents({ currentEvent }: { currentEvent: string | null }) {
         id: eventIdRef.current++,
         text: currentEvent,
         x: 20 + Math.random() * 60,
-        y: 30 + Math.random() * 40,
       };
-      setEvents((prev) => [...prev.slice(-4), newEvent]);
+      setEvents((prev) => [...prev.slice(-3), newEvent]);
     }
   }, [currentEvent]);
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="w-full max-w-md h-8 relative pointer-events-none overflow-hidden mb-2">
       <AnimatePresence>
         {events.map((event) => (
           <motion.div
             key={event.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 0.6, scale: 1 }}
-            exit={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 0.5, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.5 }}
-            className="absolute text-sm text-[#8B8B8B] font-mono italic"
-            style={{ left: `${event.x}%`, top: `${event.y}%` }}
+            className="absolute text-xs text-[#7A7A7A] font-mono italic"
+            style={{ left: `${event.x}%` }}
           >
             {event.text}
           </motion.div>
@@ -725,27 +724,27 @@ export default function ProcrastinationSimulatorPage() {
               )}
             </AnimatePresence>
             
-            {/* Feedback Text */}
+            {/* Feedback Text - HIGH Z-INDEX */}
             <AnimatePresence>
               {feedback && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-[60%] left-1/2 -translate-x-1/2 text-xs text-[#6B8E7B] font-mono text-center whitespace-nowrap bg-[#E8DFD0]/80 px-2 py-1 rounded"
+                  className="absolute top-4 left-1/2 -translate-x-1/2 z-50 text-xs text-[#4A6B5A] font-mono text-center whitespace-nowrap bg-[#E8DFD0] px-3 py-1.5 rounded shadow-lg border border-[#8B7355]"
                 >
                   {feedback}
                 </motion.div>
               )}
             </AnimatePresence>
+            
+            {/* Side Tasks - positioned relative to room */}
+            <SideTasks side="left" />
+            <SideTasks side="right" />
           </div>
         </div>
-
-        {/* Side Tasks - Left and Right */}
-        <SideTasks side="left" />
-        <SideTasks side="right" />
         
-        {/* Floating Events */}
+        {/* Floating Events - below room */}
         <FloatingEvents currentEvent={currentEvent} />
 
         {/* Action Buttons */}
