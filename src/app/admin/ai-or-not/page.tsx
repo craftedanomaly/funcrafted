@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -20,6 +20,10 @@ import {
   ZoomOut,
   Square,
   CheckSquare,
+  Trophy,
+  RefreshCw,
+  Save,
+  AlertTriangle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -30,6 +34,23 @@ interface ImageItem {
   isAI: boolean;
   source?: string;
   createdAt: string;
+}
+
+interface LeaderboardEntry {
+  id: string;
+  nickname: string;
+  score: number;
+  gameId: string;
+  createdAt: string;
+}
+
+interface ScoreRank {
+  id?: string;
+  minScore: number;
+  maxScore: number;
+  title: string;
+  imageUrl: string;
+  gameId: string;
 }
 
 interface UploadItem {
@@ -135,8 +156,15 @@ export default function AdminAiOrNotPage() {
   const [authError, setAuthError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"images" | "leaderboard" | "ranks">("images");
+
   const [images, setImages] = useState<ImageItem[]>([]);
   const [addMode, setAddMode] = useState<"upload" | "link" | null>(null);
+
+  // Leaderboard state
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [scoreRanks, setScoreRanks] = useState<ScoreRank[]>([]);
 
   // Drag-drop state
   const [isDragging, setIsDragging] = useState(false);
@@ -182,6 +210,93 @@ export default function AdminAiOrNotPage() {
     setIsLoading(false);
   }, [getAuthHeader]);
 
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/leaderboard/ai-or-not?limit=100");
+      const data = await res.json();
+      if (data.success) {
+        setLeaderboard(data.data.entries || []);
+      }
+    } catch (error) {
+      console.error("Leaderboard fetch error:", error);
+    }
+  }, []);
+
+  const fetchScoreRanks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/score-ranks?gameId=ai-or-not", {
+        headers: { Authorization: getAuthHeader() },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setScoreRanks(data.data || []);
+      }
+    } catch (error) {
+      console.error("Score ranks fetch error:", error);
+    }
+  }, [getAuthHeader]);
+
+  const deleteLeaderboardEntry = async (entryId: string) => {
+    if (!confirm("Delete this entry?")) return;
+    try {
+      const res = await fetch(`/api/leaderboard/ai-or-not?entryId=${entryId}`, {
+        method: "DELETE",
+        headers: { Authorization: getAuthHeader() },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeaderboard((prev) => prev.filter((e) => e.id !== entryId));
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+  };
+
+  const resetLeaderboard = async () => {
+    if (!confirm("DELETE ALL leaderboard entries? This cannot be undone!")) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/leaderboard/ai-or-not?reset=true", {
+        method: "DELETE",
+        headers: { Authorization: getAuthHeader() },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLeaderboard([]);
+      }
+    } catch (error) {
+      console.error("Reset error:", error);
+    }
+    setIsLoading(false);
+  };
+
+  const updateScoreRank = async (rank: ScoreRank) => {
+    try {
+      const res = await fetch("/api/admin/score-ranks", {
+        method: "POST",
+        headers: {
+          Authorization: getAuthHeader(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rank),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchScoreRanks();
+      }
+    } catch (error) {
+      console.error("Update rank error:", error);
+    }
+  };
+
+  const updateRankField = (index: number, field: keyof ScoreRank, value: string) => {
+    setScoreRanks((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
@@ -202,6 +317,8 @@ export default function AdminAiOrNotPage() {
       if (data.success) {
         setIsAuthenticated(true);
         setImages(data.data.images || []);
+        fetchLeaderboard();
+        fetchScoreRanks();
       }
     } catch (error) {
       setAuthError("Connection error");
@@ -214,6 +331,8 @@ export default function AdminAiOrNotPage() {
     setUsername("");
     setPassword("");
     setImages([]);
+    setLeaderboard([]);
+    setScoreRanks([]);
   };
 
   // Handle files from drag-drop or file input
@@ -538,12 +657,10 @@ export default function AdminAiOrNotPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-white">AI or Not Admin</h1>
-            <p className="text-sm text-gray-400">
-              {images.length} images in database
-            </p>
+            <p className="text-sm text-gray-400">Unified admin panel</p>
           </div>
           <button
             onClick={handleLogout}
@@ -554,9 +671,49 @@ export default function AdminAiOrNotPage() {
           </button>
         </div>
 
-        {/* Add Image Section */}
-        <div className="mb-8 rounded-2xl bg-gray-800 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Add Images</h2>
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setActiveTab("images")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === "images"
+                ? "bg-[#00D9FF] text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            <ImageIcon className="h-4 w-4" />
+            Images ({images.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("leaderboard")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === "leaderboard"
+                ? "bg-[#FFD23F] text-black"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            <Trophy className="h-4 w-4" />
+            Leaderboard ({leaderboard.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("ranks")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === "ranks"
+                ? "bg-[#FF6B9D] text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            <Save className="h-4 w-4" />
+            Score Ranks
+          </button>
+        </div>
+
+        {/* Images Tab */}
+        {activeTab === "images" && (
+          <>
+            {/* Add Image Section */}
+            <div className="mb-8 rounded-2xl bg-gray-800 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-white">Add Images</h2>
 
           {/* Drag-Drop Zone - Always visible */}
           <div
@@ -944,55 +1101,177 @@ export default function AdminAiOrNotPage() {
           )}
         </div>
 
-        {/* Zoom Modal */}
-        <AnimatePresence>
-          {zoomedImage && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-              onClick={() => setZoomedImage(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.9 }}
-                className="relative max-h-[90vh] max-w-[90vw]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Image
-                  src={zoomedImage.url}
-                  alt={zoomedImage.id}
-                  width={1200}
-                  height={1200}
-                  className="max-h-[80vh] w-auto rounded-xl object-contain"
-                  unoptimized
-                />
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className={`rounded-full px-3 py-1 text-sm font-bold text-white ${
-                      zoomedImage.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
-                    }`}>
-                      {zoomedImage.isAI ? "AI Generated" : "Real Photo"}
-                    </span>
-                    {zoomedImage.source && (
-                      <span className="text-sm text-gray-400">
-                        Source: {zoomedImage.source}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setZoomedImage(null)}
-                    className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
+            {/* Zoom Modal */}
+            <AnimatePresence>
+              {zoomedImage && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+                  onClick={() => setZoomedImage(null)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0.9 }}
+                    className="relative max-h-[90vh] max-w-[90vw]"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Close
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    <Image
+                      src={zoomedImage.url}
+                      alt={zoomedImage.id}
+                      width={1200}
+                      height={1200}
+                      className="max-h-[80vh] w-auto rounded-xl object-contain"
+                      unoptimized
+                    />
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className={`rounded-full px-3 py-1 text-sm font-bold text-white ${
+                          zoomedImage.isAI ? "bg-[#2EA7F2]" : "bg-[#76D95B]"
+                        }`}>
+                          {zoomedImage.isAI ? "AI Generated" : "Real Photo"}
+                        </span>
+                        {zoomedImage.source && (
+                          <span className="text-sm text-gray-400">
+                            Source: {zoomedImage.source}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setZoomedImage(null)}
+                        className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+
+        {/* Leaderboard Tab */}
+        {activeTab === "leaderboard" && (
+          <div className="rounded-2xl bg-gray-800 p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white">
+                Leaderboard Entries ({leaderboard.length})
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={fetchLeaderboard}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm text-white hover:bg-gray-600 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                  Refresh
+                </button>
+                <button
+                  onClick={resetLeaderboard}
+                  disabled={isLoading || leaderboard.length === 0}
+                  className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500 disabled:opacity-50"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Reset All
+                </button>
+              </div>
+            </div>
+
+            {leaderboard.length === 0 ? (
+              <p className="py-10 text-center text-gray-500">No entries yet.</p>
+            ) : (
+              <div className="max-h-[70vh] space-y-2 overflow-y-auto">
+                {leaderboard.map((entry, index) => (
+                  <div key={entry.id} className="flex items-center gap-3 rounded-xl bg-gray-700 p-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-600 text-sm font-bold text-gray-200">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-white">{entry.nickname}</div>
+                    </div>
+                    <div className="text-lg font-bold text-[#00FF94]">{entry.score}</div>
+                    <button
+                      onClick={() => deleteLeaderboardEntry(entry.id)}
+                      disabled={isLoading}
+                      className="rounded-lg p-2 text-gray-400 hover:bg-gray-600 hover:text-red-400 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Score Ranks Tab */}
+        {activeTab === "ranks" && (
+          <div className="rounded-2xl bg-gray-800 p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white">
+                Score Ranks ({scoreRanks.length})
+              </h2>
+              <button
+                onClick={fetchScoreRanks}
+                disabled={isLoading}
+                className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm text-white hover:bg-gray-600 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+            </div>
+
+            {scoreRanks.length === 0 ? (
+              <p className="py-10 text-center text-gray-500">No ranks configured.</p>
+            ) : (
+              <div className="space-y-4">
+                {scoreRanks.map((rank, idx) => (
+                  <div key={rank.id || idx} className="rounded-xl bg-gray-700 p-4">
+                    <div className="mb-3 flex flex-wrap items-center gap-3">
+                      <div className="rounded bg-gray-600 px-2 py-1 text-sm font-semibold text-gray-200">
+                        {rank.minScore} - {rank.maxScore} pts
+                      </div>
+                      <div className="flex-1 text-sm font-medium text-white">{rank.title}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {rank.imageUrl && (
+                        <div className="relative h-16 w-16 overflow-hidden rounded-lg">
+                          <Image
+                            src={rank.imageUrl}
+                            alt={rank.title}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={rank.imageUrl || ""}
+                          onChange={(e) => updateRankField(idx, "imageUrl", e.target.value)}
+                          placeholder="Image URL..."
+                          className="w-full rounded-lg bg-gray-600 px-3 py-2 text-sm text-white placeholder-gray-500"
+                        />
+                      </div>
+                      <button
+                        onClick={() => updateScoreRank(rank)}
+                        disabled={isLoading}
+                        className="flex items-center gap-2 rounded-lg bg-[#00D9FF] px-4 py-2 text-sm font-medium text-white hover:bg-[#00c4e6] disabled:opacity-50"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
