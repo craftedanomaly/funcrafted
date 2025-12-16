@@ -31,19 +31,33 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp;
-let db: Firestore;
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
 
-function getFirebaseApp(): FirebaseApp {
+function isFirebaseConfigured(): boolean {
+  return !!(
+    firebaseConfig.apiKey &&
+    firebaseConfig.projectId &&
+    firebaseConfig.apiKey !== "undefined"
+  );
+}
+
+function getFirebaseApp(): FirebaseApp | null {
+  if (!isFirebaseConfigured()) {
+    console.warn("Firebase not configured - missing environment variables");
+    return null;
+  }
   if (!app) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   }
   return app;
 }
 
-function getDb(): Firestore {
+function getDb(): Firestore | null {
+  const firebaseApp = getFirebaseApp();
+  if (!firebaseApp) return null;
   if (!db) {
-    db = getFirestore(getFirebaseApp());
+    db = getFirestore(firebaseApp);
   }
   return db;
 }
@@ -85,6 +99,7 @@ export async function addLeaderboardEntry(
   score: number
 ): Promise<string> {
   const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
   const docRef = await addDoc(collection(db, LEADERBOARD_COLLECTION), {
     gameId,
     nickname: nickname.trim().slice(0, 20),
@@ -102,6 +117,7 @@ export async function getLeaderboard(
   limitCount: number = 50
 ): Promise<LeaderboardEntry[]> {
   const db = getDb();
+  if (!db) return [];
   const q = query(
     collection(db, LEADERBOARD_COLLECTION),
     where("gameId", "==", gameId),
@@ -110,10 +126,10 @@ export async function getLeaderboard(
   );
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate() || new Date(),
+  return snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    createdAt: d.data().createdAt?.toDate() || new Date(),
   })) as LeaderboardEntry[];
 }
 
@@ -122,6 +138,7 @@ export async function getLeaderboard(
  */
 export async function deleteLeaderboardEntry(entryId: string): Promise<void> {
   const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
   await deleteDoc(doc(db, LEADERBOARD_COLLECTION, entryId));
 }
 
@@ -130,6 +147,7 @@ export async function deleteLeaderboardEntry(entryId: string): Promise<void> {
  */
 export async function resetLeaderboard(gameId: string): Promise<number> {
   const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
   const q = query(
     collection(db, LEADERBOARD_COLLECTION),
     where("gameId", "==", gameId)
@@ -155,6 +173,7 @@ export async function resetLeaderboard(gameId: string): Promise<number> {
  */
 export async function getScoreRanks(gameId: string): Promise<ScoreRank[]> {
   const db = getDb();
+  if (!db) return [];
   const q = query(
     collection(db, SCORE_RANKS_COLLECTION),
     where("gameId", "==", gameId),
@@ -162,9 +181,9 @@ export async function getScoreRanks(gameId: string): Promise<ScoreRank[]> {
   );
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
+  return snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
   })) as ScoreRank[];
 }
 
@@ -173,6 +192,7 @@ export async function getScoreRanks(gameId: string): Promise<ScoreRank[]> {
  */
 export async function setScoreRank(rank: ScoreRank): Promise<string> {
   const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
   
   if (rank.id) {
     await setDoc(doc(db, SCORE_RANKS_COLLECTION, rank.id), {
@@ -200,6 +220,7 @@ export async function setScoreRank(rank: ScoreRank): Promise<string> {
  */
 export async function deleteScoreRank(rankId: string): Promise<void> {
   const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
   await deleteDoc(doc(db, SCORE_RANKS_COLLECTION, rankId));
 }
 
@@ -219,6 +240,7 @@ export async function getRankForScore(
  */
 export async function initializeAiOrNotRanks(): Promise<void> {
   const db = getDb();
+  if (!db) return;
   const gameId = "ai-or-not";
 
   const defaultRanks: Omit<ScoreRank, "id">[] = [
