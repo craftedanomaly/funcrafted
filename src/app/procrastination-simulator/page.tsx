@@ -16,36 +16,37 @@ interface Action {
   timeJump: number; // in minutes
   feedback: string;
   minEntropy?: number;
+  visual?: string; // visual change trigger
 }
 
 type Era = "morning" | "day" | "evening" | "night" | "seasons" | "centuries" | "cosmic" | "end";
 
 const ACTIONS: Action[] = [
-  { label: "Organize desktop icons", timeJump: 10, feedback: "You felt productive for a second." },
-  { label: "Read random wiki page", timeJump: 45, feedback: "You learned something useless." },
-  { label: "Stare at wall", timeJump: 120, feedback: "The wall stared back." },
-  { label: "Check phone again", timeJump: 30, feedback: "Nothing new." },
-  { label: "Make another coffee", timeJump: 15, feedback: "Caffeine won't help." },
-  { label: "Scroll social media", timeJump: 90, feedback: "Everyone seems happy." },
-  { label: "Watch one more video", timeJump: 60, feedback: "The algorithm knows you." },
-  { label: "Worry about future", timeJump: 10080, feedback: "A week passed in anxiety." }, // 1 week
-  { label: "Contemplate existence", timeJump: 180, feedback: "No answers found." },
-  { label: "Reorganize bookmarks", timeJump: 45, feedback: "Still won't read them." },
-  { label: "Clean desk (partially)", timeJump: 20, feedback: "Good enough." },
-  { label: "Draft email, delete it", timeJump: 25, feedback: "Maybe tomorrow." },
-  { label: "Research productivity tips", timeJump: 120, feedback: "Ironic." },
-  { label: "Take a power nap", timeJump: 180, feedback: "You overslept." },
-  { label: "Daydream about success", timeJump: 60, feedback: "It felt real for a moment." },
-  { label: "Watch seasons change", timeJump: 131400, feedback: "Months blurred together.", minEntropy: 25 }, // 3 months
-  { label: "See empires rise", timeJump: 262800000, feedback: "History repeated itself.", minEntropy: 50 }, // 500 years
-  { label: "Witness civilizations fall", timeJump: 525600000, feedback: "Dust to dust.", minEntropy: 65 }, // 1000 years
-  { label: "Count the stars dying", timeJump: 52560000000, feedback: "The universe grew cold.", minEntropy: 80 }, // 100000 years
-  { label: "Wait for entropy", timeJump: 999999999999, feedback: "...", minEntropy: 90 },
+  { label: "Organize desktop icons", timeJump: 10, feedback: "You felt productive for a second.", visual: "desk" },
+  { label: "Read random wiki page", timeJump: 45, feedback: "You learned something useless.", visual: "screen" },
+  { label: "Stare at wall", timeJump: 120, feedback: "The wall stared back.", visual: "wall" },
+  { label: "Check phone again", timeJump: 30, feedback: "Nothing new.", visual: "phone" },
+  { label: "Make another coffee", timeJump: 15, feedback: "Caffeine won't help.", visual: "coffee" },
+  { label: "Scroll social media", timeJump: 90, feedback: "Everyone seems happy.", visual: "screen" },
+  { label: "Watch one more video", timeJump: 60, feedback: "The algorithm knows you.", visual: "screen" },
+  { label: "Worry about future", timeJump: 10080, feedback: "A week passed in anxiety.", visual: "window" },
+  { label: "Contemplate existence", timeJump: 180, feedback: "No answers found.", visual: "wall" },
+  { label: "Reorganize bookmarks", timeJump: 45, feedback: "Still won't read them.", visual: "screen" },
+  { label: "Clean desk (partially)", timeJump: 20, feedback: "Good enough.", visual: "desk" },
+  { label: "Draft email, delete it", timeJump: 25, feedback: "Maybe tomorrow.", visual: "screen" },
+  { label: "Research productivity tips", timeJump: 120, feedback: "Ironic.", visual: "screen" },
+  { label: "Take a power nap", timeJump: 180, feedback: "You overslept.", visual: "sleep" },
+  { label: "Daydream about success", timeJump: 60, feedback: "It felt real for a moment.", visual: "window" },
+  { label: "Watch seasons change", timeJump: 131400, feedback: "Months blurred together.", minEntropy: 25, visual: "window" },
+  { label: "See empires rise", timeJump: 262800000, feedback: "History repeated itself.", minEntropy: 50, visual: "window" },
+  { label: "Witness civilizations fall", timeJump: 525600000, feedback: "Dust to dust.", minEntropy: 65, visual: "window" },
+  { label: "Count the stars dying", timeJump: 52560000000, feedback: "The universe grew cold.", minEntropy: 80, visual: "window" },
+  { label: "Wait for entropy", timeJump: 999999999999, feedback: "...", minEntropy: 90, visual: "end" },
 ];
 
 const PENDING_TASKS = [
   "Reply to email",
-  "Start project",
+  "Start project", 
   "Call mom",
   "Pay bills",
   "Exercise",
@@ -61,6 +62,19 @@ const PENDING_TASKS = [
   "Cancel subscription",
 ];
 
+const EVENTS = [
+  "A bird flew by",
+  "The sun moved",
+  "Dust settled",
+  "A car passed",
+  "Someone laughed outside",
+  "The fridge hummed",
+  "A notification... nevermind",
+  "The clock ticked",
+  "Shadows shifted",
+  "Life continued elsewhere",
+];
+
 // ============================================
 // GAME ENGINE HOOK
 // ============================================
@@ -71,6 +85,8 @@ function useGameEngine() {
   const [era, setEra] = useState<Era>("morning");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [actionsTaken, setActionsTaken] = useState(0);
+  const [lastVisual, setLastVisual] = useState<string | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<string | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get available actions based on entropy
@@ -86,6 +102,30 @@ function useGameEngine() {
   useEffect(() => {
     setCurrentActions(getAvailableActions());
   }, []);
+
+  // Auto-time progression - real time x20 (1 real second = 20 game minutes)
+  useEffect(() => {
+    if (entropy >= 95) return; // Stop at end
+    
+    const interval = setInterval(() => {
+      // Add 20 minutes per real second (scaled by entropy for faster progression)
+      const timeMultiplier = entropy >= 60 ? 100 : entropy >= 30 ? 50 : 20;
+      setCurrentDate((prev) => new Date(prev.getTime() + timeMultiplier * 60 * 1000));
+      
+      // Random events while time passes
+      if (Math.random() < 0.3) {
+        setCurrentEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
+        setTimeout(() => setCurrentEvent(null), 2000);
+      }
+      
+      // Very slow entropy increase from auto-time
+      if (Math.random() < 0.05) {
+        setEntropy((prev) => Math.min(100, prev + 0.1));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [entropy]);
 
   // Determine era based on entropy
   useEffect(() => {
@@ -122,6 +162,12 @@ function useGameEngine() {
     // Show feedback
     setFeedback(action.feedback);
     feedbackTimeoutRef.current = setTimeout(() => setFeedback(null), 3000);
+
+    // Set visual change
+    if (action.visual) {
+      setLastVisual(action.visual);
+      setTimeout(() => setLastVisual(null), 2000);
+    }
 
     // Increment actions taken
     setActionsTaken((prev) => prev + 1);
@@ -167,6 +213,8 @@ function useGameEngine() {
     performAction,
     formatDate,
     formatTime,
+    lastVisual,
+    currentEvent,
   };
 }
 
@@ -436,39 +484,65 @@ function IsometricRoom({ era, entropy }: { era: Era; entropy: number }) {
   );
 }
 
-// Floating Tasks
-function FloatingTasks() {
-  const [visibleTasks, setVisibleTasks] = useState<{ id: number; text: string; x: number }[]>([]);
-  const taskIdRef = useRef(0);
+// Side Tasks - Left and Right columns
+function SideTasks({ side }: { side: "left" | "right" }) {
+  const tasks = side === "left" 
+    ? PENDING_TASKS.slice(0, 8) 
+    : PENDING_TASKS.slice(7, 15);
+  
+  return (
+    <div className={`absolute top-32 ${side === "left" ? "left-4" : "right-4"} w-40 pointer-events-none`}>
+      <div className="text-xs text-[#505050] font-mono mb-2 uppercase tracking-wider">
+        {side === "left" ? "Should do:" : "Also pending:"}
+      </div>
+      <div className="space-y-1">
+        {tasks.map((task, i) => (
+          <motion.div
+            key={task}
+            initial={{ opacity: 0, x: side === "left" ? -20 : 20 }}
+            animate={{ opacity: 0.4, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="text-xs text-[#606060] font-mono truncate"
+          >
+            • {task}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Floating Events - more visible, random positions
+function FloatingEvents({ currentEvent }: { currentEvent: string | null }) {
+  const [events, setEvents] = useState<{ id: number; text: string; x: number; y: number }[]>([]);
+  const eventIdRef = useRef(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const randomTask = PENDING_TASKS[Math.floor(Math.random() * PENDING_TASKS.length)];
-      const newTask = {
-        id: taskIdRef.current++,
-        text: randomTask,
-        x: 10 + Math.random() * 80,
+    if (currentEvent) {
+      const newEvent = {
+        id: eventIdRef.current++,
+        text: currentEvent,
+        x: 20 + Math.random() * 60,
+        y: 30 + Math.random() * 40,
       };
-      setVisibleTasks((prev) => [...prev.slice(-6), newTask]);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+      setEvents((prev) => [...prev.slice(-4), newEvent]);
+    }
+  }, [currentEvent]);
 
   return (
-    <div className="absolute bottom-24 left-0 right-0 h-32 overflow-hidden pointer-events-none">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
       <AnimatePresence>
-        {visibleTasks.map((task) => (
+        {events.map((event) => (
           <motion.div
-            key={task.id}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 0.4, y: -100 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 8, ease: "linear" }}
-            className="absolute text-sm text-gray-400/60 font-mono whitespace-nowrap"
-            style={{ left: `${task.x}%` }}
+            key={event.id}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 0.6, scale: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5 }}
+            className="absolute text-sm text-[#8B8B8B] font-mono italic"
+            style={{ left: `${event.x}%`, top: `${event.y}%` }}
           >
-            {task.text}
+            {event.text}
           </motion.div>
         ))}
       </AnimatePresence>
@@ -490,6 +564,8 @@ export default function ProcrastinationSimulatorPage() {
     performAction,
     formatDate,
     formatTime,
+    lastVisual,
+    currentEvent,
   } = useGameEngine();
 
   return (
@@ -582,8 +658,12 @@ export default function ProcrastinationSimulatorPage() {
           </div>
         </div>
 
-        {/* Floating Tasks */}
-        <FloatingTasks />
+        {/* Side Tasks - Left and Right */}
+        <SideTasks side="left" />
+        <SideTasks side="right" />
+        
+        {/* Floating Events */}
+        <FloatingEvents currentEvent={currentEvent} />
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3 max-w-md w-full px-4">
