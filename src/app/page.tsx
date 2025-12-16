@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Brain, Clapperboard, Eye, Sparkles } from "lucide-react";
+import { Brain, Clapperboard, Eye, Sparkles, Ghost } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { GameCard } from "@/components/GameCard";
@@ -37,6 +37,17 @@ const games = [
     gradient: "from-[#00D9FF] to-[#00FF94]",
     bgColor: "bg-[#00D9FF]",
     size: "normal" as const,
+  },
+  {
+    title: "Escape Yourself",
+    description:
+      "Survive the time loop! Reach the target while avoiding your past selves.",
+    href: "/escape-yourself",
+    icon: Ghost,
+    gradient: "from-[#FF4444] to-[#FF8534]",
+    bgColor: "bg-[#FF4444]",
+    size: "large" as const,
+    badge: "New",
   },
 ];
 
@@ -112,7 +123,7 @@ export default function Home() {
               transition={{ delay: 1, type: "spring" }}
               className="text-3xl font-bold text-[#FF6B9D]"
             >
-              3
+              4
             </motion.div>
             <div className="text-sm text-gray-500">
               Games
