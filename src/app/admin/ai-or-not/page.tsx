@@ -1236,9 +1236,9 @@ export default function AdminAiOrNotPage() {
                       </div>
                       <div className="flex-1 text-sm font-medium text-white">{rank.title}</div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       {rank.imageUrl && (
-                        <div className="relative h-16 w-16 overflow-hidden rounded-lg">
+                        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
                           <Image
                             src={rank.imageUrl}
                             alt={rank.title}
@@ -1248,14 +1248,45 @@ export default function AdminAiOrNotPage() {
                           />
                         </div>
                       )}
-                      <div className="flex-1">
+                      <div className="flex flex-1 items-center gap-2">
                         <input
                           type="text"
                           value={rank.imageUrl || ""}
                           onChange={(e) => updateRankField(idx, "imageUrl", e.target.value)}
                           placeholder="Image URL..."
-                          className="w-full rounded-lg bg-gray-600 px-3 py-2 text-sm text-white placeholder-gray-500"
+                          className="flex-1 rounded-lg bg-gray-600 px-3 py-2 text-sm text-white placeholder-gray-500"
                         />
+                        <label className="flex cursor-pointer items-center gap-1 rounded-lg bg-[#FF6B9D] px-3 py-2 text-sm font-medium text-white hover:bg-[#e55a8a]">
+                          <Upload className="h-4 w-4" />
+                          <span className="hidden sm:inline">Upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const formData = new FormData();
+                              formData.append("file", file);
+                              try {
+                                const res = await fetch("/api/admin/rank-images", {
+                                  method: "POST",
+                                  headers: { Authorization: getAuthHeader() },
+                                  body: formData,
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  updateRankField(idx, "imageUrl", data.data.url);
+                                } else {
+                                  alert(data.error || "Upload failed");
+                                }
+                              } catch (err) {
+                                alert("Upload failed");
+                              }
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
                       </div>
                       <button
                         onClick={() => updateScoreRank(rank)}
