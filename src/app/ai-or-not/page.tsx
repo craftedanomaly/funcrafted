@@ -14,6 +14,9 @@ import {
   CheckCircle,
   XCircle,
   Timer,
+  Medal,
+  Loader2,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -28,7 +31,22 @@ interface ImageData {
   source?: string;
 }
 
-type GamePhase = "intro" | "playing" | "feedback" | "results";
+type GamePhase = "intro" | "playing" | "feedback" | "results" | "leaderboard";
+
+interface LeaderboardEntry {
+  id: string;
+  nickname: string;
+  score: number;
+  createdAt: Date;
+}
+
+interface ScoreRank {
+  id: string;
+  minScore: number;
+  maxScore: number;
+  title: string;
+  imageUrl?: string;
+}
 
 interface GameResult {
   image: ImageData;
@@ -53,8 +71,19 @@ export default function AiOrNotPage() {
   const [imageError, setImageError] = useState(false);
   const [isLoadingImages, setIsLoadingImages] = useState(false);
 
+  // Leaderboard state
+  const [nickname, setNickname] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [playerRank, setPlayerRank] = useState<ScoreRank | null>(null);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+
   const startGame = useCallback(async () => {
     setIsLoadingImages(true);
+    setHasSubmitted(false);
+    setNickname("");
+    setPlayerRank(null);
     try {
       const res = await fetch("/api/ai-or-not/images");
       const data = await res.json();
@@ -76,6 +105,51 @@ export default function AiOrNotPage() {
     }
     setIsLoadingImages(false);
   }, []);
+
+  // Fetch leaderboard
+  const fetchLeaderboard = useCallback(async () => {
+    setIsLoadingLeaderboard(true);
+    try {
+      const res = await fetch("/api/leaderboard/ai-or-not?limit=20");
+      const data = await res.json();
+      if (data.success) {
+        setLeaderboard(data.data.entries || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch leaderboard:", error);
+    }
+    setIsLoadingLeaderboard(false);
+  }, []);
+
+  // Submit score to leaderboard
+  const submitScore = async () => {
+    if (!nickname.trim() || hasSubmitted) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/leaderboard/ai-or-not", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nickname.trim(), score: totalScore }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHasSubmitted(true);
+        setPlayerRank(data.data.rank);
+        await fetchLeaderboard();
+        setPhase("leaderboard");
+      }
+    } catch (error) {
+      console.error("Failed to submit score:", error);
+    }
+    setIsSubmitting(false);
+  };
+
+  // Skip leaderboard entry
+  const skipLeaderboard = async () => {
+    await fetchLeaderboard();
+    setPhase("leaderboard");
+  };
 
   const handleGuess = useCallback(
     (guessIsAI: boolean) => {
@@ -466,7 +540,7 @@ export default function AiOrNotPage() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="rounded-2xl bg-gradient-to-br from-[#76D95B] to-[#96D966] p-8 text-white shadow-lg"
+                  className="rounded-2xl bg-gradient-to-br from-[#00D9FF] to-[#00FF94] p-8 text-white shadow-lg"
                 >
                   <div className="mb-2 text-6xl">{scoreMessage.emoji}</div>
                   <h2 className="mb-2 text-2xl font-bold">{scoreMessage.title}</h2>
@@ -477,22 +551,60 @@ export default function AiOrNotPage() {
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-                    <div className="text-2xl font-bold text-green-500">
+                  <div className="rounded-xl bg-[#1A1A1A] p-4 shadow">
+                    <div className="text-2xl font-bold text-[#00FF94]">
                       {results.filter((r) => r.correct).length}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-400">
                       Correct
                     </div>
                   </div>
-                  <div className="rounded-xl bg-white p-4 shadow dark:bg-gray-800">
-                    <div className="text-2xl font-bold text-red-500">
+                  <div className="rounded-xl bg-[#1A1A1A] p-4 shadow">
+                    <div className="text-2xl font-bold text-[#FF6B9D]">
                       {results.filter((r) => !r.correct).length}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-sm text-gray-400">
                       Wrong
                     </div>
                   </div>
+                </div>
+
+                {/* Leaderboard Entry Form */}
+                <div className="rounded-xl bg-[#1A1A1A] p-6">
+                  <h3 className="mb-4 text-lg font-semibold text-white">
+                    <Trophy className="mr-2 inline h-5 w-5 text-[#FFD23F]" />
+                    Join the Leaderboard!
+                  </h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      placeholder="Enter your nickname..."
+                      maxLength={20}
+                      className="flex-1 rounded-xl bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
+                      onKeyDown={(e) => e.key === "Enter" && submitScore()}
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={submitScore}
+                      disabled={!nickname.trim() || isSubmitting}
+                      className="rounded-xl bg-gradient-to-r from-[#00D9FF] to-[#00FF94] px-6 py-3 font-semibold text-white disabled:opacity-50"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </motion.button>
+                  </div>
+                  <button
+                    onClick={skipLeaderboard}
+                    className="mt-3 text-sm text-gray-500 hover:text-gray-300"
+                  >
+                    Skip and view leaderboard →
+                  </button>
                 </div>
 
                 {/* Action Buttons */}
@@ -501,7 +613,7 @@ export default function AiOrNotPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleShare}
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#2EA7F2] to-[#76D95B] px-6 py-3 font-semibold text-white shadow-lg"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF6B9D] to-[#C44DFF] px-6 py-3 font-semibold text-white shadow-lg"
                   >
                     <Share2 className="h-5 w-5" />
                     Share Score
@@ -514,6 +626,126 @@ export default function AiOrNotPage() {
                   >
                     <RotateCcw className="h-5 w-5" />
                     Play Again
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Leaderboard Phase */}
+            {phase === "leaderboard" && (
+              <motion.div
+                key="leaderboard"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                {/* Player Rank Card */}
+                {playerRank && (
+                  <motion.div
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    className="rounded-2xl bg-gradient-to-br from-[#FFD23F] to-[#FF8534] p-6 text-center text-white shadow-lg"
+                  >
+                    {playerRank.imageUrl && (
+                      <div className="mb-4 flex justify-center">
+                        <Image
+                          src={playerRank.imageUrl}
+                          alt={playerRank.title}
+                          width={120}
+                          height={120}
+                          className="rounded-xl"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    <h3 className="text-xl font-bold">{playerRank.title}</h3>
+                    <p className="mt-2 text-white/80">Score: {totalScore} points</p>
+                  </motion.div>
+                )}
+
+                {/* Your Score Summary */}
+                <div className="rounded-xl bg-[#1A1A1A] p-4 text-center">
+                  <div className="text-3xl font-bold text-[#00FF94]">{totalScore}</div>
+                  <div className="text-sm text-gray-400">Your Score</div>
+                </div>
+
+                {/* Leaderboard */}
+                <div className="rounded-xl bg-[#1A1A1A] p-6">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+                    <Trophy className="h-5 w-5 text-[#FFD23F]" />
+                    Top Players
+                  </h3>
+
+                  {isLoadingLeaderboard ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                    </div>
+                  ) : leaderboard.length === 0 ? (
+                    <p className="py-8 text-center text-gray-500">
+                      No entries yet. Be the first!
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {leaderboard.map((entry, index) => (
+                        <div
+                          key={entry.id}
+                          className={`flex items-center gap-3 rounded-lg p-3 ${
+                            index === 0
+                              ? "bg-gradient-to-r from-[#FFD23F]/20 to-transparent"
+                              : index === 1
+                              ? "bg-gradient-to-r from-gray-400/20 to-transparent"
+                              : index === 2
+                              ? "bg-gradient-to-r from-[#CD7F32]/20 to-transparent"
+                              : "bg-gray-800/50"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
+                              index === 0
+                                ? "bg-[#FFD23F] text-black"
+                                : index === 1
+                                ? "bg-gray-400 text-black"
+                                : index === 2
+                                ? "bg-[#CD7F32] text-white"
+                                : "bg-gray-700 text-gray-300"
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-white">
+                              {entry.nickname}
+                            </div>
+                          </div>
+                          <div className="text-lg font-bold text-[#00FF94]">
+                            {entry.score}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startGame}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#00D9FF] to-[#00FF94] px-6 py-3 font-semibold text-white shadow-lg"
+                  >
+                    <RotateCcw className="h-5 w-5" />
+                    Play Again
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleShare}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-gray-700 px-6 py-3 font-semibold text-white"
+                  >
+                    <Share2 className="h-5 w-5" />
+                    Share Score
                   </motion.button>
                 </div>
               </motion.div>
