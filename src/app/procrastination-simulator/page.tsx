@@ -623,16 +623,67 @@ export default function ProcrastinationSimulatorPage() {
             {/* Floor */}
             <div className="absolute bottom-0 left-0 right-0 h-16 bg-[#C4B8A5]" />
             
+            {/* Coffee Cup - appears on coffee action */}
+            <AnimatePresence>
+              {lastVisual === "coffee" && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute bottom-14 right-16 w-4 h-5"
+                >
+                  <div className="w-full h-full bg-[#F5F5DC] rounded-b-sm border border-[#8B7355]" />
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-1 bg-[#6B4423] rounded-t-sm" />
+                  <motion.div
+                    animate={{ y: [-2, -4, -2], opacity: [0.5, 0.2, 0.5] }}
+                    transition={{ duration: 1, repeat: 3 }}
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] text-gray-400"
+                  >
+                    ~
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Phone - appears on phone action */}
+            <AnimatePresence>
+              {lastVisual === "phone" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute bottom-14 left-16 w-3 h-5 bg-[#2A2A2A] rounded-sm border border-[#1A1A1A]"
+                >
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 0.5, repeat: 4 }}
+                    className="w-full h-full bg-[#4A90D9]/30 rounded-sm"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
             {/* Desk */}
             <div className="absolute bottom-12 left-1/2 -translate-x-1/2 w-24 h-8 bg-[#A0522D] rounded-t-sm shadow-lg">
               {/* Monitor */}
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-14 h-10 bg-[#2A2A2A] rounded-sm border-2 border-[#1A1A1A]">
                 <motion.div
-                  animate={{ opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 3, repeat: Infinity }}
+                  animate={{ 
+                    opacity: lastVisual === "screen" ? [0.9, 1, 0.9] : [0.7, 1, 0.7],
+                    backgroundColor: lastVisual === "screen" ? ["#1E3A5F", "#3A5F8F", "#1E3A5F"] : "#1E3A5F"
+                  }}
+                  transition={{ duration: lastVisual === "screen" ? 0.5 : 3, repeat: Infinity }}
                   className="w-full h-full bg-gradient-to-br from-[#1E3A5F] to-[#0D1B2A] rounded-sm flex items-center justify-center"
                 >
-                  <div className="w-2 h-2 bg-[#00FF00]/30 rounded-full" />
+                  {lastVisual === "screen" ? (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 0.3, repeat: 6 }}
+                      className="w-8 h-1 bg-white/40 rounded"
+                    />
+                  ) : (
+                    <div className="w-2 h-2 bg-[#00FF00]/30 rounded-full" />
+                  )}
                 </motion.div>
               </div>
               {/* Monitor Stand */}
@@ -641,6 +692,38 @@ export default function ProcrastinationSimulatorPage() {
             
             {/* Character */}
             <Character />
+            
+            {/* Sleep overlay */}
+            <AnimatePresence>
+              {lastVisual === "sleep" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.5 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-[#1A1A1A]/40 flex items-center justify-center"
+                >
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: 2 }}
+                    className="text-2xl text-white/60"
+                  >
+                    z z z
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Wall stare effect */}
+            <AnimatePresence>
+              {lastVisual === "wall" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.3, 0] }}
+                  transition={{ duration: 2 }}
+                  className="absolute inset-0 bg-gradient-radial from-transparent to-[#6B8E7B]/20"
+                />
+              )}
+            </AnimatePresence>
             
             {/* Feedback Text */}
             <AnimatePresence>
