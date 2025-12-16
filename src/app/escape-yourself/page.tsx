@@ -134,6 +134,7 @@ export default function EscapeYourselfPage() {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showCollision, setShowCollision] = useState(false);
   
   // Leaderboard state
   const [nickname, setNickname] = useState("");
@@ -304,25 +305,32 @@ export default function EscapeYourselfPage() {
 
   // Game over
   const gameOver = useCallback(() => {
-    setPhase("gameover");
+    // Show collision effect first
+    setShowCollision(true);
     cancelAnimationFrame(animationFrameRef.current);
     
-    // Final score is already calculated with time penalty
-    const finalScore = Math.max(0, scoreRef.current);
-    setScore(finalScore);
-    if (finalScore > highScore) {
-      setHighScore(finalScore);
-    }
-    
-    // Fetch leaderboard
-    fetch("/api/leaderboard/escape-yourself?limit=10")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setLeaderboard(data.data.entries || []);
-        }
-      })
-      .catch(console.error);
+    // Delay game over screen for visual feedback
+    setTimeout(() => {
+      setShowCollision(false);
+      setPhase("gameover");
+      
+      // Final score is already calculated with time penalty
+      const finalScore = Math.max(0, scoreRef.current);
+      setScore(finalScore);
+      if (finalScore > highScore) {
+        setHighScore(finalScore);
+      }
+      
+      // Fetch leaderboard
+      fetch("/api/leaderboard/escape-yourself?limit=10")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setLeaderboard(data.data.entries || []);
+          }
+        })
+        .catch(console.error);
+    }, 500);
   }, [highScore]);
 
   // Submit score
@@ -334,7 +342,7 @@ export default function EscapeYourselfPage() {
       const res = await fetch("/api/leaderboard/escape-yourself", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname: nickname.trim().toUpperCase().slice(0, 3), score: score }),
+        body: JSON.stringify({ nickname: nickname.trim().slice(0, 12), score: score }),
       });
       const data = await res.json();
       if (data.success) {
@@ -430,9 +438,9 @@ export default function EscapeYourselfPage() {
     <div className="flex min-h-screen flex-col bg-[#0A0A0A]">
       <Header />
 
-      <main className="flex flex-1 flex-col items-center justify-center p-4">
+      <main className="flex flex-1 flex-col items-center p-4 pt-2">
         {/* Back Button */}
-        <div className="mb-4 w-full max-w-4xl">
+        <div className="mb-2 w-full">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white"
@@ -465,13 +473,34 @@ export default function EscapeYourselfPage() {
             </div>
           )}
 
-          {/* Game Area - Full Width */}
+          {/* Game Area - Viewport Fit */}
           <div
             ref={gameAreaRef}
             onMouseMove={handleMouseMove}
-            className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#0D0D0D] to-[#1A1A1A]"
-            style={{ cursor: phase === "playing" ? "none" : "default" }}
+            className="relative w-full overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#0D0D0D] to-[#1A1A1A]"
+            style={{ 
+              cursor: phase === "playing" ? "none" : "default",
+              height: "calc(100vh - 180px)",
+              maxHeight: "800px",
+              minHeight: "400px",
+            }}
           >
+            {/* Collision Flash Overlay */}
+            <AnimatePresence>
+              {showCollision && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 1, 0.5, 1, 0] }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0 z-50 pointer-events-none"
+                  style={{
+                    background: "radial-gradient(circle, rgba(255,0,0,0.6) 0%, rgba(255,0,0,0.3) 50%, transparent 70%)",
+                    boxShadow: "inset 0 0 100px rgba(255,0,0,0.8)",
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
             {/* Grid Background */}
             <div
               className="absolute inset-0 opacity-10"
@@ -553,15 +582,15 @@ export default function EscapeYourselfPage() {
                     {/* Nickname Input */}
                     {!hasSubmitted && (
                       <div className="mb-6">
-                        <p className="mb-2 text-sm text-gray-500">Enter your initials:</p>
+                        <p className="mb-2 text-sm text-gray-500">Enter your nickname:</p>
                         <div className="flex items-center justify-center gap-2">
                           <input
                             type="text"
                             value={nickname}
-                            onChange={(e) => setNickname(e.target.value.toUpperCase().slice(0, 3))}
-                            placeholder="NEO"
-                            maxLength={3}
-                            className="w-24 rounded-lg bg-gray-800 px-4 py-3 text-center font-mono text-2xl text-white uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
+                            onChange={(e) => setNickname(e.target.value.slice(0, 12))}
+                            placeholder="Player"
+                            maxLength={12}
+                            className="w-40 rounded-lg bg-gray-800 px-4 py-3 text-center font-mono text-lg text-white focus:outline-none focus:ring-2 focus:ring-[#00D9FF]"
                           />
                           <button
                             onClick={submitScore}
