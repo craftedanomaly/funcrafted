@@ -352,15 +352,17 @@ function Window({ era }: { era: Era }) {
   );
 }
 
-// Command Line Panel Component
+// Command Line Panel Component with mixed colors for task log
 function CommandLinePanel({ 
   title, 
   logs, 
-  color = "green" 
+  color = "green",
+  isTaskLog = false
 }: { 
   title: string; 
   logs: string[]; 
   color?: "green" | "amber" | "red";
+  isTaskLog?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -374,6 +376,12 @@ function CommandLinePanel({
     green: "text-green-500 border-green-900/50",
     amber: "text-amber-500 border-amber-900/50",
     red: "text-red-500 border-red-900/50",
+  };
+
+  const getLogColor = (log: string) => {
+    if (!isTaskLog) return colorClasses[color];
+    if (log.includes("FAILED") || log.includes("⚠️")) return "text-red-500";
+    return "text-green-500";
   };
 
   return (
@@ -395,7 +403,7 @@ function CommandLinePanel({
             key={`${log}-${i}`}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            className={`${colorClasses[color]} opacity-80 mb-1 leading-tight`}
+            className={`${getLogColor(log)} opacity-80 mb-1 leading-tight`}
           >
             {log}
           </motion.div>
@@ -434,7 +442,8 @@ export default function ProcrastinationSimulatorPage() {
         <CommandLinePanel 
           title="tasks.log" 
           logs={taskLog} 
-          color={failedCount > 0 ? "red" : "green"} 
+          color="green"
+          isTaskLog={true}
         />
 
         {/* Center - Room and Controls */}
@@ -568,7 +577,7 @@ export default function ProcrastinationSimulatorPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 w-72">
+          <div className="grid grid-cols-2 gap-2 w-80">
             {currentActions.map((action, i) => (
               <motion.button
                 key={`${action.label}-${i}`}
@@ -578,7 +587,7 @@ export default function ProcrastinationSimulatorPage() {
                 whileHover={{ scale: 1.02, backgroundColor: "rgba(107, 142, 123, 0.2)" }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performAction(action)}
-                className="px-3 py-2 text-xs text-[#A0A0A0] hover:text-white font-mono border border-[#3A3A3A] rounded bg-[#1A1A1A]/50 transition-colors text-left truncate"
+                className="px-3 py-2.5 text-[11px] text-[#A0A0A0] hover:text-white font-mono border border-[#3A3A3A] rounded bg-[#1A1A1A]/50 transition-colors text-left"
               >
                 {action.label}
             </motion.button>
