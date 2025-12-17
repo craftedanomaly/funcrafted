@@ -246,18 +246,18 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="mt-16 grid grid-cols-3 gap-4 rounded-3xl bg-[#1A1A1A] border border-gray-800 p-8"
+          className="mt-8 md:mt-16 grid grid-cols-3 gap-2 md:gap-4 rounded-2xl md:rounded-3xl bg-[#1A1A1A] border border-gray-800 p-4 md:p-8"
         >
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 1, type: "spring" }}
-              className="text-3xl font-bold text-[#FF6B9D]"
+              className="text-2xl md:text-3xl font-bold text-[#FF6B9D]"
             >
-              5
+              6
             </motion.div>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs md:text-sm text-gray-500">
               Games
             </div>
           </div>
@@ -266,22 +266,22 @@ export default function Home() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 1.1, type: "spring" }}
-              className="text-3xl font-bold text-[#FFD23F]"
+              className="text-2xl md:text-3xl font-bold text-[#FFD23F]"
             >
               ∞
             </motion.div>
-            <div className="text-sm text-gray-500">Fun</div>
+            <div className="text-xs md:text-sm text-gray-500">Fun</div>
           </div>
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 1.2, type: "spring" }}
-              className="text-3xl font-bold text-[#00FF94]"
+              className="text-2xl md:text-3xl font-bold text-[#00FF94]"
             >
               100%
             </motion.div>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs md:text-sm text-gray-500">
               AI Magic
             </div>
           </div>

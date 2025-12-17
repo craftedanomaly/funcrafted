@@ -454,19 +454,19 @@ export default function EscapeYourselfPage() {
         <div className="relative w-full">
           {/* HUD */}
           {phase === "playing" && (
-            <div className="absolute left-4 top-4 z-20 flex gap-4">
-              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
-                <span className="font-mono text-lg text-[#00D9FF]">
+            <div className="absolute left-2 md:left-4 top-2 md:top-4 z-20 flex flex-wrap gap-2 md:gap-4">
+              <div className="rounded-lg bg-black/50 px-2 md:px-4 py-1 md:py-2 backdrop-blur-sm">
+                <span className="font-mono text-xs md:text-lg text-[#00D9FF]">
                   LOOP: <span className="text-white">{currentLoop}</span>
                 </span>
               </div>
-              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
-                <span className="font-mono text-lg text-[#00FF94]">
+              <div className="rounded-lg bg-black/50 px-2 md:px-4 py-1 md:py-2 backdrop-blur-sm">
+                <span className="font-mono text-xs md:text-lg text-[#00FF94]">
                   SCORE: <span className="text-white">{score}</span>
                 </span>
               </div>
-              <div className="rounded-lg bg-black/50 px-4 py-2 backdrop-blur-sm">
-                <span className="font-mono text-lg text-[#FF6B9D]">
+              <div className="rounded-lg bg-black/50 px-2 md:px-4 py-1 md:py-2 backdrop-blur-sm">
+                <span className="font-mono text-xs md:text-lg text-[#FF6B9D]">
                   TIME: <span className="text-white">{elapsedTime}s</span>
                 </span>
               </div>
@@ -480,9 +480,10 @@ export default function EscapeYourselfPage() {
             className="relative w-full overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#0D0D0D] to-[#1A1A1A]"
             style={{ 
               cursor: phase === "playing" ? "none" : "default",
-              height: "calc(100vh - 180px)",
+              height: "calc(100vh - 160px)",
               maxHeight: "800px",
-              minHeight: "400px",
+              minHeight: "300px",
+              touchAction: "none",
             }}
           >
             {/* Collision Flash Overlay */}
@@ -525,11 +526,11 @@ export default function EscapeYourselfPage() {
                   <motion.h1
                     initial={{ y: -20 }}
                     animate={{ y: 0 }}
-                    className="mb-2 text-4xl font-bold text-white md:text-5xl"
+                    className="mb-2 text-2xl md:text-4xl lg:text-5xl font-bold text-white"
                   >
                     ESCAPE <span className="text-[#00D9FF]">YOURSELF</span>
                   </motion.h1>
-                  <p className="mb-8 max-w-md text-center text-gray-400">
+                  <p className="mb-6 md:mb-8 max-w-md text-center text-gray-400 text-sm md:text-base px-4">
                     Reach the target. Each loop, your past self hunts you.
                     <br />
                     <span className="text-[#FF4444]">Don&apos;t touch your ghosts.</span>
@@ -538,7 +539,7 @@ export default function EscapeYourselfPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={startGame}
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00D9FF] to-[#00FF94] px-8 py-4 text-lg font-bold text-black"
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#00D9FF] to-[#00FF94] px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-black"
                   >
                     <Play className="h-5 w-5" />
                     INITIATE LOOP
@@ -566,7 +567,7 @@ export default function EscapeYourselfPage() {
                     animate={{ scale: 1 }}
                     className="text-center"
                   >
-                    <h2 className="mb-2 text-3xl font-bold text-[#FF4444]">
+                    <h2 className="mb-2 text-2xl md:text-3xl font-bold text-[#FF4444]">
                       PARADOX CREATED
                     </h2>
                     <div className="mb-6 space-y-1">

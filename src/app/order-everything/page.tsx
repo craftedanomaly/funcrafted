@@ -54,7 +54,7 @@ function TrophyCabinet({ isOpen, onClose, achievements }: { isOpen: boolean; onC
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-        className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        className="bg-white rounded-3xl p-4 md:p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl mx-2" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Trophy className="w-6 h-6 text-yellow-500" /> Trophy Cabinet
@@ -65,12 +65,12 @@ function TrophyCabinet({ isOpen, onClose, achievements }: { isOpen: boolean; onC
         {unlocked.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-semibold text-green-600 mb-3">✅ UNLOCKED</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
               {unlocked.map(ach => (
-                <div key={ach.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-2xl p-3 text-center">
-                  <div className="text-3xl mb-1">{ach.icon}</div>
-                  <div className="font-semibold text-sm text-gray-800">{ach.name}</div>
-                  <div className="text-xs text-gray-500">{ach.desc}</div>
+                <div key={ach.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-2xl p-2 md:p-3 text-center">
+                  <div className="text-2xl md:text-3xl mb-1">{ach.icon}</div>
+                  <div className="font-semibold text-xs md:text-sm text-gray-800">{ach.name}</div>
+                  <div className="text-[10px] md:text-xs text-gray-500 line-clamp-2">{ach.desc}</div>
                 </div>
               ))}
             </div>
@@ -79,12 +79,12 @@ function TrophyCabinet({ isOpen, onClose, achievements }: { isOpen: boolean; onC
         {locked.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-gray-400 mb-3">🔒 LOCKED</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
               {locked.map(ach => (
-                <div key={ach.id} className="bg-gray-100 border-2 border-gray-200 rounded-2xl p-3 text-center opacity-50">
-                  <div className="text-3xl mb-1">🔒</div>
-                  <div className="font-semibold text-sm text-gray-600">???</div>
-                  <div className="text-xs text-gray-400">{ach.desc}</div>
+                <div key={ach.id} className="bg-gray-100 border-2 border-gray-200 rounded-2xl p-2 md:p-3 text-center opacity-50">
+                  <div className="text-2xl md:text-3xl mb-1">🔒</div>
+                  <div className="font-semibold text-xs md:text-sm text-gray-600">???</div>
+                  <div className="text-[10px] md:text-xs text-gray-400 line-clamp-2">{ach.desc}</div>
                 </div>
               ))}
             </div>
@@ -101,8 +101,7 @@ function LeaderboardModal({ isOpen, onClose, entries, isLoading }: { isOpen: boo
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-        className="bg-gradient-to-br from-red-900 to-red-950 rounded-3xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl border-2 border-red-700"
-        onClick={e => e.stopPropagation()}>
+        className="bg-gradient-to-br from-red-900 to-red-950 rounded-3xl p-4 md:p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl border border-red-800 mx-2" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-red-200">💀 Hall of Shame</h2>
           <button onClick={onClose} className="p-2 hover:bg-red-800 rounded-full text-red-300"><X className="w-5 h-5" /></button>
@@ -267,15 +266,15 @@ export default function OrderEverythingPage() {
         <div className="w-full max-w-2xl">
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent mb-2">
               EverythingNow™
             </h1>
             <p className="text-gray-500">Order Anything. Destroy Everything. 🌍💀</p>
-            <div className="flex justify-center gap-4 mt-4">
-              <button onClick={() => { setShowTrophies(true); }} className="flex items-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 rounded-full text-sm font-medium text-yellow-700 transition-colors">
-                <Trophy className="w-4 h-4" /> {unlockedCount}/{totalCount}
+            <div className="flex flex-wrap justify-center gap-2 md:gap-4 mt-4">
+              <button onClick={() => { setShowTrophies(true); }} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-yellow-100 hover:bg-yellow-200 rounded-full text-xs md:text-sm font-medium text-yellow-700 transition-colors">
+                <Trophy className="w-3 h-3 md:w-4 md:h-4" /> {unlockedCount}/{totalCount}
               </button>
-              <button onClick={() => { setShowLeaderboard(true); loadLeaderboard(); }} className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 rounded-full text-sm font-medium text-red-700 transition-colors">
+              <button onClick={() => { setShowLeaderboard(true); loadLeaderboard(); }} className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-red-100 hover:bg-red-200 rounded-full text-xs md:text-sm font-medium text-red-700 transition-colors">
                 💀 Hall of Shame
               </button>
             </div>
@@ -284,14 +283,14 @@ export default function OrderEverythingPage() {
 
           {/* Input */}
           {!result && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-6 shadow-xl mb-6">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-4 md:p-6 shadow-xl mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">What would you like to order?</label>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                 <input type="text" value={itemName} onChange={e => setItemName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleOrder()}
                   placeholder="e.g., Burger, iPhone, Private Jet..." disabled={isLoading}
-                  className="flex-1 px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-lg text-gray-900 placeholder:text-gray-400" />
+                  className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-base md:text-lg text-gray-900 placeholder:text-gray-400" />
                 <button onClick={handleOrder} disabled={isLoading || !itemName.trim()}
-                  className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-2">
+                  className="px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2">
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Package className="w-5 h-5" />}
                   Order!
                 </button>
@@ -302,9 +301,9 @@ export default function OrderEverythingPage() {
 
           {/* Order Tracking - Always show when result exists */}
           {result && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-3xl p-6 shadow-xl mb-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Package className="w-6 h-6 text-purple-500" /> Tracking: {orderedItem}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-3xl p-4 md:p-6 shadow-xl mb-6">
+              <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4 md:mb-6 flex items-center gap-2">
+                <Package className="w-5 h-5 md:w-6 md:h-6 text-purple-500" /> <span className="truncate">Tracking: {orderedItem}</span>
               </h2>
               <div className="space-y-2">
                 {result.steps.map((step, i) => (
@@ -316,19 +315,19 @@ export default function OrderEverythingPage() {
 
           {/* Result */}
           {showResult && result && (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-xl text-center">
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-4 md:p-8 shadow-xl text-center">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}
-                className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center">
-                <span className="text-5xl">🔥</span>
+                className="w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 md:mb-6 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center">
+                <span className="text-4xl md:text-5xl">🔥</span>
               </motion.div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Complete!</h2>
-              <p className="text-gray-500 mb-6">{orderedItem}</p>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Order Complete!</h2>
+              <p className="text-gray-500 mb-4 md:mb-6 truncate">{orderedItem}</p>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-                className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-6 mb-6">
-                <div className="text-5xl font-black text-white mb-2">{result.totalImpactLabel}</div>
-                <div className="text-white/80">Carbon Footprint Generated! 🎉</div>
+                className="bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl p-4 md:p-6 mb-4 md:mb-6">
+                <div className="text-3xl md:text-5xl font-black text-white mb-2">{result.totalImpactLabel}</div>
+                <div className="text-sm md:text-base text-white/80">Carbon Footprint Generated! 🎉</div>
               </motion.div>
-              <p className="text-lg text-gray-600 mb-6 italic">&quot;{result.finalMessage}&quot;</p>
+              <p className="text-base md:text-lg text-gray-600 mb-4 md:mb-6 italic">&quot;{result.finalMessage}&quot;</p>
               
               {!submitted && !showNicknameInput && (
                 <button onClick={() => setShowNicknameInput(true)}
@@ -338,9 +337,9 @@ export default function OrderEverythingPage() {
               )}
               
               {showNicknameInput && !submitted && (
-                <div className="flex gap-2 justify-center mb-4">
+                <div className="flex flex-col sm:flex-row gap-2 justify-center mb-4">
                   <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Your shameful name..."
-                    className="px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-red-400 focus:outline-none text-gray-900 placeholder:text-gray-400" maxLength={20} />
+                    className="px-3 md:px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-red-400 focus:outline-none text-gray-900 placeholder:text-gray-400" maxLength={20} />
                   <button onClick={handleSubmitScore} disabled={isSubmitting || !nickname.trim()}
                     className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50">
                     {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit"}

@@ -322,28 +322,28 @@ export default function AiOrNotPage() {
                   </ul>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4 rounded-2xl bg-gradient-to-r from-[#76D95B]/20 to-[#96D966]/20 p-4 dark:from-[#76D95B]/10 dark:to-[#96D966]/10">
+                <div className="grid grid-cols-3 gap-2 md:gap-4 rounded-2xl bg-gradient-to-r from-[#76D95B]/20 to-[#96D966]/20 p-3 md:p-4 dark:from-[#76D95B]/10 dark:to-[#96D966]/10">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
+                    <div className="text-xl md:text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
                       {TOTAL_ROUNDS}
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400">
                       Images
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
+                    <div className="text-xl md:text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
                       {TIME_PER_ROUND}s
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400">
                       Per Image
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
+                    <div className="text-xl md:text-2xl font-bold text-[#76D95B] dark:text-[#96D966]">
                       120
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400">
                       Max Score
                     </div>
                   </div>
@@ -353,7 +353,7 @@ export default function AiOrNotPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={startGame}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#76D95B] to-[#96D966] px-8 py-4 text-lg font-bold text-white shadow-lg"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#76D95B] to-[#96D966] px-6 md:px-8 py-3 md:py-4 text-base md:text-lg font-bold text-white shadow-lg"
                 >
                   <Eye className="h-6 w-6" />
                   Start Game
@@ -502,23 +502,23 @@ export default function AiOrNotPage() {
 
                 {/* Guess Buttons */}
                 {!showFeedback && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2 md:gap-4">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleGuess(true)}
-                      className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[#2EA7F2] to-[#76D95B] p-4 font-bold text-white shadow-lg"
+                      className="flex items-center justify-center gap-1.5 md:gap-2 rounded-2xl bg-gradient-to-br from-[#2EA7F2] to-[#76D95B] p-3 md:p-4 text-sm md:text-base font-bold text-white shadow-lg"
                     >
-                      <Bot className="h-6 w-6" />
+                      <Bot className="h-5 w-5 md:h-6 md:w-6" />
                       AI Generated
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleGuess(false)}
-                      className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-[#76D95B] to-[#96D966] p-4 font-bold text-white shadow-lg"
+                      className="flex items-center justify-center gap-1.5 md:gap-2 rounded-2xl bg-gradient-to-br from-[#76D95B] to-[#96D966] p-3 md:p-4 text-sm md:text-base font-bold text-white shadow-lg"
                     >
-                      <User className="h-6 w-6" />
+                      <User className="h-5 w-5 md:h-6 md:w-6" />
                       Real Photo
                     </motion.button>
                   </div>

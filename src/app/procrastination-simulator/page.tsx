@@ -385,7 +385,7 @@ function CommandLinePanel({
   };
 
   return (
-    <div className={`w-64 h-80 bg-[#0a0a0a] border ${colorClasses[color]} rounded font-mono text-xs overflow-hidden flex flex-col`}>
+    <div className={`w-full md:w-64 h-40 md:h-80 bg-[#0a0a0a] border ${colorClasses[color]} rounded font-mono text-xs overflow-hidden flex flex-col`}>
       <div className={`px-2 py-1 border-b ${colorClasses[color]} bg-[#111] flex items-center gap-2`}>
         <div className="flex gap-1">
           <div className="w-2 h-2 rounded-full bg-red-500/60" />
@@ -437,23 +437,25 @@ export default function ProcrastinationSimulatorPage() {
     <div className="flex min-h-screen flex-col bg-[#0a0a0a]">
       <Header />
 
-      <main className="flex flex-1 items-center justify-center p-4 gap-6">
-        {/* Left Panel - Task Log */}
-        <CommandLinePanel 
-          title="tasks.log" 
-          logs={taskLog} 
-          color="green"
-          isTaskLog={true}
-        />
+      <main className="flex flex-1 flex-col md:flex-row items-center justify-center p-2 md:p-4 gap-3 md:gap-6">
+        {/* Mobile: Panels at bottom, Desktop: Left Panel */}
+        <div className="hidden md:block">
+          <CommandLinePanel 
+            title="tasks.log" 
+            logs={taskLog} 
+            color="green"
+            isTaskLog={true}
+          />
+        </div>
 
         {/* Center - Room and Controls */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center w-full md:w-auto">
           {/* Day Counter */}
           <motion.div
             key={day}
             initial={{ scale: 1.2, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="font-mono text-2xl text-[#A0A0A0] mb-4"
+            className="font-mono text-xl md:text-2xl text-[#A0A0A0] mb-2 md:mb-4"
           >
             Day {day}
           </motion.div>
@@ -474,8 +476,8 @@ export default function ProcrastinationSimulatorPage() {
           </div>
 
           {/* The Room */}
-          <div className="relative mb-6">
-            <div className="relative w-72 h-56 bg-[#E8DFD0] rounded-lg overflow-hidden border-4 border-[#8B7355] shadow-2xl">
+          <div className="relative mb-4 md:mb-6">
+            <div className="relative w-64 md:w-72 h-48 md:h-56 bg-[#E8DFD0] rounded-lg overflow-hidden border-4 border-[#8B7355] shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-b from-[#E8DFD0] to-[#D9CFC0]" />
               
               <Window era={era} />
@@ -577,7 +579,7 @@ export default function ProcrastinationSimulatorPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 w-80">
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2 w-full max-w-xs md:w-80">
             {currentActions.map((action, i) => (
               <motion.button
                 key={`${action.label}-${i}`}
@@ -587,7 +589,7 @@ export default function ProcrastinationSimulatorPage() {
                 whileHover={{ scale: 1.02, backgroundColor: "rgba(107, 142, 123, 0.2)" }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => performAction(action)}
-                className="px-3 py-2.5 text-[11px] text-[#A0A0A0] hover:text-white font-mono border border-[#3A3A3A] rounded bg-[#1A1A1A]/50 transition-colors text-left"
+                className="px-2 md:px-3 py-2 md:py-2.5 text-[10px] md:text-[11px] text-[#A0A0A0] hover:text-white font-mono border border-[#3A3A3A] rounded bg-[#1A1A1A]/50 transition-colors text-left"
               >
                 {action.label}
             </motion.button>
@@ -595,17 +597,34 @@ export default function ProcrastinationSimulatorPage() {
           </div>
 
           {/* Actions Counter */}
-          <div className="mt-4 text-xs text-[#404040] font-mono">
+          <div className="mt-2 md:mt-4 text-xs text-[#404040] font-mono">
             Actions taken: {actionsTaken}
           </div>
         </div>
 
-        {/* Right Panel - Event Log */}
-        <CommandLinePanel 
-          title="events.log" 
-          logs={eventLog} 
-          color="amber" 
-        />
+        {/* Desktop: Right Panel */}
+        <div className="hidden md:block">
+          <CommandLinePanel 
+            title="events.log" 
+            logs={eventLog} 
+            color="amber" 
+          />
+        </div>
+
+        {/* Mobile: Both panels at bottom */}
+        <div className="flex md:hidden gap-2 w-full px-2">
+          <CommandLinePanel 
+            title="tasks.log" 
+            logs={taskLog} 
+            color="green"
+            isTaskLog={true}
+          />
+          <CommandLinePanel 
+            title="events.log" 
+            logs={eventLog} 
+            color="amber" 
+          />
+        </div>
       </main>
 
       {/* Back Button */}

@@ -216,13 +216,13 @@ export default function LoglineSlotsPage() {
             phase === "spinning" ? { y: [0, -10, 0], scale: [1, 1.1, 1] } : {}
           }
           transition={{ duration: 0.1, repeat: phase === "spinning" ? Infinity : 0 }}
-          className={`flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br ${color} p-1 shadow-lg`}
+          className={`flex h-20 w-20 md:h-28 md:w-28 items-center justify-center rounded-2xl bg-gradient-to-br ${color} p-1 shadow-lg`}
         >
           <div className="flex h-full w-full items-center justify-center rounded-xl bg-white dark:bg-gray-900">
             {Icon ? (
-              <Icon className="h-14 w-14 text-gray-700 dark:text-gray-300" />
+              <Icon className="h-10 w-10 md:h-14 md:w-14 text-gray-700 dark:text-gray-300" />
             ) : (
-              <span className="text-3xl">?</span>
+              <span className="text-2xl md:text-3xl">?</span>
             )}
           </div>
         </motion.div>
@@ -292,19 +292,19 @@ export default function LoglineSlotsPage() {
                 className="space-y-8"
               >
                 {/* Slot Reels */}
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-2 md:gap-4 flex-wrap">
                   <SlotReel
                     item={slots.protagonist}
                     label="Protagonist"
                     color="from-[#2EA7F2] to-[#76D95B]"
                   />
-                  <span className="mt-6 text-2xl font-bold text-gray-400">+</span>
+                  <span className="mt-6 text-xl md:text-2xl font-bold text-gray-400 hidden sm:block">+</span>
                   <SlotReel
                     item={slots.setting}
                     label="Setting"
                     color="from-[#76D95B] to-[#96D966]"
                   />
-                  <span className="mt-6 text-2xl font-bold text-gray-400">+</span>
+                  <span className="mt-6 text-xl md:text-2xl font-bold text-gray-400 hidden sm:block">+</span>
                   <SlotReel
                     item={slots.goal}
                     label="Goal"
@@ -337,37 +337,37 @@ export default function LoglineSlotsPage() {
                 className="space-y-6"
               >
                 {/* Slot Icons Display */}
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex items-center justify-center gap-2 md:gap-4 flex-wrap">
                   {slots.protagonist && (
                     <div className="flex flex-col items-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2EA7F2] to-[#76D95B] p-1 shadow-lg">
+                      <div className="flex h-14 w-14 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2EA7F2] to-[#76D95B] p-1 shadow-lg">
                         <div className="flex h-full w-full items-center justify-center rounded-xl bg-white dark:bg-gray-900">
-                          <slots.protagonist.icon className="h-10 w-10 text-[#2EA7F2]" />
+                          <slots.protagonist.icon className="h-7 w-7 md:h-10 md:w-10 text-[#2EA7F2]" />
                         </div>
                       </div>
-                      <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Protagonist</span>
+                      <span className="mt-1 text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Protagonist</span>
                     </div>
                   )}
-                  <span className="text-2xl font-bold text-gray-400">+</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-400 hidden sm:block">+</span>
                   {slots.setting && (
                     <div className="flex flex-col items-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#76D95B] to-[#96D966] p-1 shadow-lg">
+                      <div className="flex h-14 w-14 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#76D95B] to-[#96D966] p-1 shadow-lg">
                         <div className="flex h-full w-full items-center justify-center rounded-xl bg-white dark:bg-gray-900">
-                          <slots.setting.icon className="h-10 w-10 text-[#76D95B]" />
+                          <slots.setting.icon className="h-7 w-7 md:h-10 md:w-10 text-[#76D95B]" />
                         </div>
                       </div>
-                      <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Setting</span>
+                      <span className="mt-1 text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Setting</span>
                     </div>
                   )}
-                  <span className="text-2xl font-bold text-gray-400">+</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-400 hidden sm:block">+</span>
                   {slots.goal && (
                     <div className="flex flex-col items-center">
-                      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F2CD13] to-[#F2695C] p-1 shadow-lg">
+                      <div className="flex h-14 w-14 md:h-20 md:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#F2CD13] to-[#F2695C] p-1 shadow-lg">
                         <div className="flex h-full w-full items-center justify-center rounded-xl bg-white dark:bg-gray-900">
-                          <slots.goal.icon className="h-10 w-10 text-[#F2695C]" />
+                          <slots.goal.icon className="h-7 w-7 md:h-10 md:w-10 text-[#F2695C]" />
                         </div>
                       </div>
-                      <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Goal</span>
+                      <span className="mt-1 text-[10px] md:text-xs text-gray-500 dark:text-gray-400">Goal</span>
                     </div>
                   )}
                 </div>
