@@ -31,7 +31,7 @@ function FunStats() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8 }}
-      className="mt-8 md:mt-16 grid grid-cols-4 gap-2 md:gap-4 rounded-2xl md:rounded-3xl bg-[#1A1A1A] border border-gray-800 p-4 md:p-8"
+      className="mt-8 md:mt-16 grid grid-cols-3 gap-2 md:gap-4 rounded-2xl md:rounded-3xl bg-[#1A1A1A] border border-gray-800 p-4 md:p-8"
     >
       <div className="text-center">
         <motion.div
@@ -65,17 +65,6 @@ function FunStats() {
           ∞
         </motion.div>
         <div className="text-xs md:text-sm text-gray-500">Fun</div>
-      </div>
-      <div className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 1.3, type: "spring" }}
-          className="text-2xl md:text-3xl font-bold text-[#00FF94]"
-        >
-          100%
-        </motion.div>
-        <div className="text-xs md:text-sm text-gray-500">AI Magic</div>
       </div>
     </motion.div>
   );

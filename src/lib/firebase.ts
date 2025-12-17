@@ -302,13 +302,14 @@ export async function incrementGamePlayCount(gameId: string): Promise<void> {
   if (!db) return;
   
   const docRef = doc(db, GAME_STATS_COLLECTION, gameId);
-  try {
+  const docSnap = await getDoc(docRef);
+  
+  if (docSnap.exists()) {
     await updateDoc(docRef, {
       playCount: increment(1),
       lastPlayed: Timestamp.now(),
     });
-  } catch {
-    // Document doesn't exist, create it
+  } else {
     await setDoc(docRef, {
       gameId,
       playCount: 1,
