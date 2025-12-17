@@ -6,7 +6,9 @@ import {
   resetLeaderboard,
   getScoreRanks,
   getRankForScore,
+  ScoreRank,
 } from "@/lib/firebase";
+import { normalizeAssetUrl } from "@/lib/r2";
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "funcrafted2024";
@@ -35,9 +37,15 @@ export async function GET(
     const entries = await getLeaderboard(gameId, limitCount);
     const ranks = await getScoreRanks(gameId);
 
+    // Normalize imageUrl in ranks to use NEXT_PUBLIC_ASSET_BASE_URL
+    const normalizedRanks = ranks.map((rank) => ({
+      ...rank,
+      imageUrl: rank.imageUrl ? normalizeAssetUrl(rank.imageUrl) : "",
+    }));
+
     return NextResponse.json({
       success: true,
-      data: { entries, ranks },
+      data: { entries, ranks: normalizedRanks },
     });
   } catch (error) {
     console.error("Leaderboard GET error:", error);
@@ -75,9 +83,15 @@ export async function POST(
     const entryId = await addLeaderboardEntry(gameId, nickname, score);
     const rank = await getRankForScore(gameId, score);
 
+    // Normalize rank imageUrl if present
+    const normalizedRank = rank ? {
+      ...rank,
+      imageUrl: rank.imageUrl ? normalizeAssetUrl(rank.imageUrl) : "",
+    } : null;
+
     return NextResponse.json({
       success: true,
-      data: { entryId, rank },
+      data: { entryId, rank: normalizedRank },
     });
   } catch (error) {
     console.error("Leaderboard POST error:", error);

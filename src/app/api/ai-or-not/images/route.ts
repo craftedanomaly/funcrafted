@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getManifest } from "@/lib/r2";
+import { getManifest, normalizeAssetUrl } from "@/lib/r2";
 
 // Public endpoint - no auth required
 // Returns shuffled images for the game
@@ -11,9 +11,10 @@ export async function GET(request: NextRequest) {
     const shuffled = [...manifest.images].sort(() => Math.random() - 0.5);
     
     // Return only what the game needs (hide source until reveal)
+    // Normalize URLs to use NEXT_PUBLIC_ASSET_BASE_URL
     const gameImages = shuffled.map((img) => ({
       id: img.id,
-      url: img.url,
+      url: normalizeAssetUrl(img.url),
       isAI: img.isAI,
       source: img.source,
     }));

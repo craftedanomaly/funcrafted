@@ -6,6 +6,7 @@ import {
   initializeAiOrNotRanks,
   ScoreRank,
 } from "@/lib/firebase";
+import { normalizeAssetUrl } from "@/lib/r2";
 
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "funcrafted2024";
@@ -38,16 +39,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const gameId = searchParams.get("gameId") || "ai-or-not";
 
-    const ranks = await getScoreRanks(gameId);
+    let ranks = await getScoreRanks(gameId);
 
     // Initialize default ranks if empty
     if (ranks.length === 0 && gameId === "ai-or-not") {
       await initializeAiOrNotRanks();
-      const newRanks = await getScoreRanks(gameId);
-      return NextResponse.json({ success: true, data: newRanks });
+      ranks = await getScoreRanks(gameId);
     }
 
-    return NextResponse.json({ success: true, data: ranks });
+    // Normalize imageUrl in ranks to use NEXT_PUBLIC_ASSET_BASE_URL
+    const normalizedRanks = ranks.map((rank) => ({
+      ...rank,
+      imageUrl: rank.imageUrl ? normalizeAssetUrl(rank.imageUrl) : "",
+    }));
+
+    return NextResponse.json({ success: true, data: normalizedRanks });
   } catch (error) {
     console.error("Score ranks GET error:", error);
     return NextResponse.json(

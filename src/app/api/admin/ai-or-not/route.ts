@@ -5,6 +5,7 @@ import {
   uploadImage,
   deleteImage,
   generateImageId,
+  normalizeAssetUrl,
   ImageManifestItem,
 } from "@/lib/r2";
 
@@ -41,7 +42,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const manifest = await getManifest();
-    return NextResponse.json({ success: true, data: manifest });
+    // Normalize image URLs to use NEXT_PUBLIC_ASSET_BASE_URL
+    const normalizedManifest = {
+      ...manifest,
+      images: manifest.images.map((img) => ({
+        ...img,
+        url: normalizeAssetUrl(img.url),
+      })),
+    };
+    return NextResponse.json({ success: true, data: normalizedManifest });
   } catch (error) {
     console.error("Admin GET error:", error);
     return NextResponse.json(

@@ -8,6 +8,7 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || "";
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || "";
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "funcrafted";
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
+const ASSET_BASE_URL = process.env.NEXT_PUBLIC_ASSET_BASE_URL || R2_PUBLIC_URL;
 
 function getR2Endpoint(): string {
   return `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
@@ -235,9 +236,9 @@ export async function uploadImage(
       return null;
     }
     
-    // Return public URL
-    if (R2_PUBLIC_URL) {
-      return `${R2_PUBLIC_URL}/${key}`;
+    // Return public URL using asset base URL
+    if (ASSET_BASE_URL) {
+      return `${ASSET_BASE_URL}/${key}`;
     }
     return `${endpoint}/${R2_BUCKET_NAME}/${key}`;
   } catch (error) {
@@ -280,4 +281,29 @@ export async function deleteImage(filename: string): Promise<boolean> {
 
 export function generateImageId(): string {
   return `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Normalize image URL to use the current ASSET_BASE_URL
+ * This handles migration from old dev URLs to production domain
+ */
+export function normalizeAssetUrl(url: string): string {
+  if (!url || !ASSET_BASE_URL) return url;
+  
+  // Extract the path from the URL (e.g., "ai-or-not/images/xxx.jpg")
+  const patterns = [
+    /pub\.r2\.dev\/(.+)$/,
+    /r2\.cloudflarestorage\.com\/[^/]+\/(.+)$/,
+    /assets\.craftedanomaly\.com\/(.+)$/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return `${ASSET_BASE_URL}/${match[1]}`;
+    }
+  }
+  
+  // If URL already starts with ASSET_BASE_URL or is external, return as-is
+  return url;
 }

@@ -28,57 +28,26 @@ RULES:
 1. Generate EXACTLY 5 realistic production steps specific to that product
 2. Each step = real production phase + environmental cost + cheerful spin
 3. totalImpactValue = realistic CO2 estimate in kg (research typical values)
-4. Assign 1-3 Achievement IDs from this list:
-   - ACH_PLASTIC: plastic items
-   - ACH_TREE_HATER: paper/wood items
-   - ACH_TECH_BRO: gadgets, electronics
-   - ACH_CARNIVORE: meat products
-   - ACH_FASHION: clothing
-   - ACH_WATER: items needing >1000L water
-   - ACH_CLIMATE: if CO2 > 1000kg
-   - ACH_EXTINCTION: if CO2 > 10000kg
-   - ACH_FLYER: air freight involved
-   - ACH_GOLD: jewelry, precious metals
-   - ACH_BATTERY: batteries, EVs
-   - ACH_SINGLE_USE: disposables
-   - ACH_ONE_PERCENT: luxury items (yacht, mansion, private jet)
-   - ACH_GREENWASH: "eco-friendly" products
-   - ACH_NOTHING: ordering nothing/void/air
-   - ACH_CARBON_BABY: if CO2 < 10kg
-   - ACH_SPACE: space-related items (rockets, satellites, Mars colony)
-   - ACH_DICTATOR: thrones, palaces, golden statues, military parades
-   - ACH_TIME: vintage/antique items or futuristic tech
-   - ACH_DOOMSDAY: bunkers, survival gear, apocalypse prep
-   - ACH_VILLAIN: volcano lairs, shark tanks, evil HQ
-   - ACH_CRYPTO: NFTs, Bitcoin miners, blockchain servers
-   - ACH_FLAT: conspiracy theory items
-   - ACH_ALIEN: UFOs, alien tech, Area 51 merch
-   - ACH_NUCLEAR: uranium, reactors, nuclear weapons
-   - ACH_CHILD: cheap toys from sweatshops
-   - ACH_AMAZON: products destroying rainforests
-   - ACH_BLOOD: conflict minerals, blood diamonds
-   - ACH_WHALE: whale products, harpoons
-   - ACH_PANGOLIN: exotic animal products
-   - ACH_OZONE: CFCs, old refrigerators
-   - ACH_MICRO: seafood with microplastics
-   - ACH_COAL: diesel trucks, coal products
-   - ACH_PALM: palm oil products
-   - ACH_SWEAT: ultra-cheap fast fashion
-   - ACH_ELON: Tesla, SpaceX, flamethrowers
+4. Assign 1-3 Achievement IDs from the provided list when appropriate
 
-OUTPUT ONLY VALID JSON:
+OUTPUT FORMAT: Return ONLY a single valid JSON object. Do not include explanations, markdown, or extra text.
+IMPORTANT JSON RULES:
+- Use double quotes for ALL keys and ALL string values.
+- Do NOT use placeholder words like number/string. Use real values.
+
+JSON EXAMPLE (shape only):
 {
   "steps": [
-    { "icon": "🐄", "title": "Hayvancılık", "desc": "3 yıl boyunca beslenen inek! Günde 150L su + 70kg metan gazı. Çayırlar mutlu! 🌾" },
-    { "icon": "🔪", "title": "İşleme", "desc": "Modern kesimhane! Hijyenik, verimli, %100 organik korku. 🥩" },
-    { "icon": "🏭", "title": "Paketleme", "desc": "Plastik, köpük, daha plastik! Okyanuslar bu kadar hediyeyi hak ediyor! 🎁" },
-    { "icon": "🚛", "title": "Soğuk Zincir", "desc": "500km soğutmalı TIR yolculuğu! Freon gazı sadece küçük bir bonus! ❄️" },
-    { "icon": "🍔", "title": "Servis", "desc": "Izgarada 5 dakika! Doğal gaz ile pişirildi, lezzet garantili! 🔥" }
+    { "icon": "🐄", "title": "Farming", "desc": "..." },
+    { "icon": "🏭", "title": "Processing", "desc": "..." },
+    { "icon": "📦", "title": "Packaging", "desc": "..." },
+    { "icon": "🚛", "title": "Transport", "desc": "..." },
+    { "icon": "🛒", "title": "Delivery", "desc": "..." }
   ],
-  "totalImpactValue": 6,
-  "totalImpactLabel": "6 kg CO2",
-  "finalMessage": "Bir hamburger için 2.500 litre su harcandı! Afiyet olsun! 🐄💨",
-  "unlockedAchievements": ["ACH_CARNIVORE", "ACH_WATER"]
+  "totalImpactValue": 123,
+  "totalImpactLabel": "123 kg CO2",
+  "finalMessage": "...",
+  "unlockedAchievements": ["ACH_WATER"]
 }`;
 
 interface OrderResult {
@@ -89,10 +58,102 @@ interface OrderResult {
   unlockedAchievements: string[];
 }
 
-export async function POST(request: NextRequest) {
+const ORDER_EVERYTHING_ROUTE_VERSION = "debug-v2";
+
+function safeParseJSON(text: string): { parsed: OrderResult; debug: Record<string, unknown> } {
+  const normalized = text
+    .replace(/\uFEFF/g, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim();
+
+  const firstBrace = normalized.indexOf("{");
+  const lastBrace = normalized.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("No valid JSON object found in AI response");
+  }
+
+  let jsonOnly = normalized.slice(firstBrace, lastBrace + 1);
+
+  // Some models wrap objects in double braces: {{ ... }}
+  if (jsonOnly.startsWith("{{") && jsonOnly.endsWith("}}")) {
+    jsonOnly = jsonOnly.slice(1, -1);
+  }
+
+  const debugBase = {
+    firstBrace,
+    lastBrace,
+    textLength: normalized.length,
+    jsonLength: jsonOnly.length,
+    jsonStart: jsonOnly.slice(0, 200),
+    jsonEnd: jsonOnly.slice(-200),
+    firstCharCode: jsonOnly.length > 0 ? jsonOnly.charCodeAt(0) : null,
+    secondCharCode: jsonOnly.length > 1 ? jsonOnly.charCodeAt(1) : null,
+  };
+
   try {
+    return { parsed: JSON.parse(jsonOnly) as OrderResult, debug: { ...debugBase, repaired: false } };
+  } catch (e) {
+    const repaired0 = jsonOnly
+      .replace(/\bTrue\b/g, "true")
+      .replace(/\bFalse\b/g, "false")
+      .replace(/\bNone\b/g, "null")
+      .replace(/,(\s*[}\]])/g, "$1");
+
+    // Common model mistake: Python-style single quotes.
+    const repaired1 = repaired0.startsWith("{'") || repaired0.includes("':") ? repaired0.replace(/'/g, '"') : repaired0;
+
+    // Common model mistake: unquoted keys: { steps: [...] } -> { "steps": [...] }
+    const repaired2 = repaired1.replace(/([\{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3');
+
+    // Another common model mistake: smart quotes in the JSON blob itself.
+    const repaired3 = repaired2.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+
+    try {
+      return {
+        parsed: JSON.parse(repaired3) as OrderResult,
+        debug: {
+          ...debugBase,
+          repaired: true,
+          repairChanged: repaired3 !== jsonOnly,
+          repairedStart: repaired3.slice(0, 200),
+          repairedEnd: repaired3.slice(-200),
+          originalParseError: e instanceof Error ? e.message : String(e),
+        },
+      };
+    } catch (e2) {
+      const err = new Error(
+        `JSON parse failed. original=${e instanceof Error ? e.message : String(e)} repaired=${e2 instanceof Error ? e2.message : String(e2)}`
+      ) as Error & { debug?: Record<string, unknown> };
+      err.debug = {
+        ...debugBase,
+        repaired: true,
+        repairChanged: repaired3 !== jsonOnly,
+        repairedStart: repaired3.slice(0, 200),
+        repairedEnd: repaired3.slice(-200),
+        originalParseError: e instanceof Error ? e.message : String(e),
+        repairedParseError: e2 instanceof Error ? e2.message : String(e2),
+      };
+      throw err;
+    }
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const reqId = crypto.randomUUID();
+  const debugEnabled = process.env.NODE_ENV !== "production";
+  let aiTextStart: string | undefined;
+  let aiTextEnd: string | undefined;
+  let parseDebug: Record<string, unknown> | undefined;
+
+  try {
+    if (debugEnabled) {
+      console.error(`[order-everything:${reqId}] route=${ORDER_EVERYTHING_ROUTE_VERSION}`);
+    }
+
     const body = await request.json();
-    const { item } = body;
+    const { item } = body as { item?: string };
 
     if (!item || typeof item !== "string" || item.trim().length === 0) {
       return NextResponse.json(
@@ -103,44 +164,60 @@ export async function POST(request: NextRequest) {
 
     const prompt = `Generate an order tracking timeline for: "${item.trim()}"`;
 
-    const result = await geminiGenerateText({
+    const ai = await geminiGenerateText({
       prompt,
       systemInstruction: SYSTEM_PROMPT,
     });
 
-    if (!result.success) {
+    if (!ai.success) {
       return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 500 }
+        { success: false, error: ai.error },
+        { status: 502 }
       );
     }
 
-    // Clean the response - remove markdown code blocks if present
-    let jsonStr = result.data.trim();
-    if (jsonStr.startsWith("```json")) {
-      jsonStr = jsonStr.slice(7);
-    }
-    if (jsonStr.startsWith("```")) {
-      jsonStr = jsonStr.slice(3);
-    }
-    if (jsonStr.endsWith("```")) {
-      jsonStr = jsonStr.slice(0, -3);
-    }
-    jsonStr = jsonStr.trim();
-
-    const parsed = JSON.parse(jsonStr) as OrderResult;
-
-    // Validate the response
-    if (!parsed.steps || !Array.isArray(parsed.steps) || parsed.steps.length === 0) {
-      throw new Error("Invalid response format");
+    if (!ai.data || !ai.data.trim()) {
+      return NextResponse.json(
+        { success: false, error: "AI returned empty response" },
+        { status: 502 }
+      );
     }
 
-    // Ensure totalImpactValue is a number
+    aiTextStart = ai.data.slice(0, 600);
+    aiTextEnd = ai.data.slice(-600);
+    if (debugEnabled) {
+      console.error(`[order-everything:${reqId}] aiTextStart=`, aiTextStart);
+      console.error(`[order-everything:${reqId}] aiTextEnd=`, aiTextEnd);
+    }
+
+    let parsed: OrderResult;
+    try {
+      const parsedResult = safeParseJSON(ai.data.trim());
+      parsed = parsedResult.parsed;
+      parseDebug = parsedResult.debug;
+    } catch (parseError) {
+      const err = parseError as any;
+      if (err?.debug && typeof err.debug === "object") {
+        parseDebug = err.debug;
+      }
+
+      console.error(`[order-everything:${reqId}] RAW AI RESPONSE:\n`, ai.data);
+      throw parseError;
+    }
+
+    if (!Array.isArray(parsed.steps) || parsed.steps.length !== 5) {
+      throw new Error("Invalid steps array");
+    }
+
     if (typeof parsed.totalImpactValue !== "number") {
-      parsed.totalImpactValue = parseInt(String(parsed.totalImpactValue).replace(/[^0-9]/g, "")) || 100;
+      const coerced = parseInt(String(parsed.totalImpactValue).replace(/[^0-9]/g, ""), 10);
+      parsed.totalImpactValue = Number.isFinite(coerced) ? coerced : 100;
     }
 
-    // Add score-based achievements
+    if (!Array.isArray(parsed.unlockedAchievements)) {
+      parsed.unlockedAchievements = [];
+    }
+
     if (parsed.totalImpactValue < 10 && !parsed.unlockedAchievements.includes("ACH_CARBON_BABY")) {
       parsed.unlockedAchievements.push("ACH_CARBON_BABY");
     }
@@ -151,11 +228,29 @@ export async function POST(request: NextRequest) {
       parsed.unlockedAchievements.push("ACH_EXTINCTION");
     }
 
-    return NextResponse.json({ success: true, data: parsed });
+    return NextResponse.json(
+      debugEnabled
+        ? { success: true, data: parsed, debug: { reqId, parse: parseDebug } }
+        : { success: true, data: parsed },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Order Everything error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to process order. Please try again!";
     return NextResponse.json(
-      { success: false, error: "Failed to process order. Please try again!" },
+      debugEnabled
+        ? {
+            success: false,
+            error: errorMessage,
+            debug: {
+              routeVersion: ORDER_EVERYTHING_ROUTE_VERSION,
+              reqId,
+              aiTextStart: aiTextStart ?? null,
+              aiTextEnd: aiTextEnd ?? null,
+              parse: parseDebug ?? null,
+            },
+          }
+        : { success: false, error: errorMessage },
       { status: 500 }
     );
   }
