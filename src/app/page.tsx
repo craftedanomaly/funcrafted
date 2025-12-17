@@ -180,6 +180,16 @@ const games = [
   },
 ];
 
+// Track game click
+function trackGameClick(href: string) {
+  const gameId = href.replace("/", "");
+  fetch("/api/game-stats", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ gameId }),
+  }).catch(() => {});
+}
+
 // Uniform Game Card Component
 function GameCard({ 
   title, 
@@ -204,7 +214,7 @@ function GameCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, type: "spring", stiffness: 100 }}
     >
-      <Link href={href} className="group block">
+      <Link href={href} className="group block" onClick={() => trackGameClick(href)}>
         <motion.div
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.98 }}

@@ -201,13 +201,6 @@ export default function EscapeYourselfPage() {
 
   // Start game
   const startGame = useCallback(() => {
-    // Track game play
-    fetch("/api/game-stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId: "escape-yourself" }),
-    }).catch(() => {});
-
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
     

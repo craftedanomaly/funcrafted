@@ -216,12 +216,6 @@ export default function OrderEverythingPage() {
     setShowResult(false);
     setSubmitted(false);
     setOrderedItem(itemName.trim());
-    // Track game play
-    fetch("/api/game-stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId: "order-everything" }),
-    }).catch(() => {});
 
     const res = await generateOrder(itemName);
     setIsLoading(false);

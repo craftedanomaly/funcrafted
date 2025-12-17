@@ -52,12 +52,6 @@ export default function LoglineSlotsPage() {
   const spinSlots = useCallback(async () => {
     setPhase("spinning");
     setIsLoading(true);
-    // Track game play
-    fetch("/api/game-stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId: "logline-creator" }),
-    }).catch(() => {});
 
     // Final selection - pick these first
     const finalSlots = {
