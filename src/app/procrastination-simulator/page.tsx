@@ -433,6 +433,15 @@ export default function ProcrastinationSimulatorPage() {
     failedCount,
   } = useGameEngine();
 
+  // Track game play on mount
+  useEffect(() => {
+    fetch("/api/game-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId: "procrastination-simulator" }),
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col bg-[#0a0a0a]">
       <Header />

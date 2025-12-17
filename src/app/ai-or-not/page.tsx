@@ -84,6 +84,12 @@ export default function AiOrNotPage() {
     setHasSubmitted(false);
     setNickname("");
     setPlayerRank(null);
+    // Track game play
+    fetch("/api/game-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId: "ai-or-not" }),
+    }).catch(() => {});
     try {
       const res = await fetch("/api/ai-or-not/images");
       const data = await res.json();

@@ -48,6 +48,12 @@ export default function WhoAmIPage() {
     setGameMode(mode);
     setMessages([]);
     setSecretIdentity(null);
+    // Track game play
+    fetch("/api/game-stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId: "who-am-i" }),
+    }).catch(() => {});
 
     try {
       const response = await fetch("/api/who-am-i", {

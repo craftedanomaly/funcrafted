@@ -20,6 +20,8 @@ import {
   Timestamp,
   writeBatch,
   Firestore,
+  increment,
+  updateDoc,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -280,6 +282,93 @@ export const GAME_IDS = {
   WHO_AM_I: "who-am-i",
   LOGLINE_CREATOR: "logline-creator",
   ORDER_EVERYTHING: "order-everything",
+  PROCRASTINATION_SIMULATOR: "procrastination-simulator",
+  ESCAPE_YOURSELF: "escape-yourself",
 } as const;
 
 export type GameId = (typeof GAME_IDS)[keyof typeof GAME_IDS];
+
+// ============================================
+// Game Play Counter
+// ============================================
+
+const GAME_STATS_COLLECTION = "gameStats";
+
+/**
+ * Increment play count for a game
+ */
+export async function incrementGamePlayCount(gameId: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+  
+  const docRef = doc(db, GAME_STATS_COLLECTION, gameId);
+  try {
+    await updateDoc(docRef, {
+      playCount: increment(1),
+      lastPlayed: Timestamp.now(),
+    });
+  } catch {
+    // Document doesn't exist, create it
+    await setDoc(docRef, {
+      gameId,
+      playCount: 1,
+      lastPlayed: Timestamp.now(),
+    });
+  }
+}
+
+/**
+ * Get play count for a specific game
+ */
+export async function getGamePlayCount(gameId: string): Promise<number> {
+  const db = getDb();
+  if (!db) return 0;
+  
+  const docRef = doc(db, GAME_STATS_COLLECTION, gameId);
+  const docSnap = await getDoc(docRef);
+  
+  if (docSnap.exists()) {
+    return docSnap.data().playCount || 0;
+  }
+  return 0;
+}
+
+/**
+ * Get total play count across all games
+ */
+export async function getTotalPlayCount(): Promise<number> {
+  const db = getDb();
+  if (!db) return 0;
+  
+  const q = query(collection(db, GAME_STATS_COLLECTION));
+  const snapshot = await getDocs(q);
+  
+  let total = 0;
+  snapshot.forEach((doc) => {
+    total += doc.data().playCount || 0;
+  });
+  
+  return total;
+}
+
+/**
+ * Get all game stats
+ */
+export async function getAllGameStats(): Promise<{ gameId: string; playCount: number }[]> {
+  const db = getDb();
+  if (!db) return [];
+  
+  const q = query(collection(db, GAME_STATS_COLLECTION));
+  const snapshot = await getDocs(q);
+  
+  const stats: { gameId: string; playCount: number }[] = [];
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+    stats.push({
+      gameId: data.gameId || doc.id,
+      playCount: data.playCount || 0,
+    });
+  });
+  
+  return stats;
+}

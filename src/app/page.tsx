@@ -1,10 +1,85 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+
+// FunStats component with live play count
+function FunStats() {
+  const [totalPlays, setTotalPlays] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch("/api/game-stats");
+        const data = await res.json();
+        if (data.success) {
+          setTotalPlays(data.data.total);
+        }
+      } catch (error) {
+        console.error("Failed to fetch game stats:", error);
+      }
+    }
+    fetchStats();
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.8 }}
+      className="mt-8 md:mt-16 grid grid-cols-4 gap-2 md:gap-4 rounded-2xl md:rounded-3xl bg-[#1A1A1A] border border-gray-800 p-4 md:p-8"
+    >
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 1, type: "spring" }}
+          className="text-2xl md:text-3xl font-bold text-[#FF6B9D]"
+        >
+          6
+        </motion.div>
+        <div className="text-xs md:text-sm text-gray-500">Games</div>
+      </div>
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 1.1, type: "spring" }}
+          className="text-2xl md:text-3xl font-bold text-[#00D9FF]"
+        >
+          {totalPlays !== null ? totalPlays.toLocaleString() : "..."}
+        </motion.div>
+        <div className="text-xs md:text-sm text-gray-500">Times Played</div>
+      </div>
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 1.2, type: "spring" }}
+          className="text-2xl md:text-3xl font-bold text-[#FFD23F]"
+        >
+          ∞
+        </motion.div>
+        <div className="text-xs md:text-sm text-gray-500">Fun</div>
+      </div>
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 1.3, type: "spring" }}
+          className="text-2xl md:text-3xl font-bold text-[#00FF94]"
+        >
+          100%
+        </motion.div>
+        <div className="text-xs md:text-sm text-gray-500">AI Magic</div>
+      </div>
+    </motion.div>
+  );
+}
 
 // SVG Icons for each game
 const GameIcons = {
@@ -242,50 +317,7 @@ export default function Home() {
         </div>
 
         {/* Fun Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mt-8 md:mt-16 grid grid-cols-3 gap-2 md:gap-4 rounded-2xl md:rounded-3xl bg-[#1A1A1A] border border-gray-800 p-4 md:p-8"
-        >
-          <div className="text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1, type: "spring" }}
-              className="text-2xl md:text-3xl font-bold text-[#FF6B9D]"
-            >
-              6
-            </motion.div>
-            <div className="text-xs md:text-sm text-gray-500">
-              Games
-            </div>
-          </div>
-          <div className="text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1.1, type: "spring" }}
-              className="text-2xl md:text-3xl font-bold text-[#FFD23F]"
-            >
-              ∞
-            </motion.div>
-            <div className="text-xs md:text-sm text-gray-500">Fun</div>
-          </div>
-          <div className="text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1.2, type: "spring" }}
-              className="text-2xl md:text-3xl font-bold text-[#00FF94]"
-            >
-              100%
-            </motion.div>
-            <div className="text-xs md:text-sm text-gray-500">
-              AI Magic
-            </div>
-          </div>
-        </motion.div>
+        <FunStats />
       </main>
 
       <Footer />
