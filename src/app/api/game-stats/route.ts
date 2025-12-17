@@ -23,9 +23,14 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Game stats GET error:", error);
+    const err = error as any;
+    const code = typeof err?.code === "string" ? err.code : undefined;
+    const message = typeof err?.message === "string" ? err.message : "Failed to fetch game stats";
+
+    const status = code === "permission-denied" ? 403 : 500;
     return NextResponse.json(
-      { success: false, error: "Failed to fetch game stats" },
-      { status: 500 }
+      { success: false, error: message, code },
+      { status }
     );
   }
 }
@@ -47,9 +52,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Game stats POST error:", error);
+    const err = error as any;
+    const code = typeof err?.code === "string" ? err.code : undefined;
+    const message = typeof err?.message === "string" ? err.message : "Failed to increment play count";
+
+    const status = code === "permission-denied" ? 403 : 500;
     return NextResponse.json(
-      { success: false, error: "Failed to increment play count" },
-      { status: 500 }
+      { success: false, error: message, code },
+      { status }
     );
   }
 }
