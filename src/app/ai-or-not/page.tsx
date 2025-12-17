@@ -106,7 +106,7 @@ export default function AiOrNotPage() {
     setIsLoadingImages(false);
   }, []);
 
-  // Fetch leaderboard
+  // Fetch leaderboard and ranks
   const fetchLeaderboard = useCallback(async () => {
     setIsLoadingLeaderboard(true);
     try {
@@ -119,6 +119,23 @@ export default function AiOrNotPage() {
       console.error("Failed to fetch leaderboard:", error);
     }
     setIsLoadingLeaderboard(false);
+  }, []);
+
+  // Fetch rank for current score
+  const fetchRankForScore = useCallback(async (score: number) => {
+    try {
+      const res = await fetch("/api/leaderboard/ai-or-not?limit=1");
+      const data = await res.json();
+      if (data.success && data.data.ranks) {
+        const ranks = data.data.ranks as ScoreRank[];
+        const matchingRank = ranks.find((r) => score >= r.minScore && score <= r.maxScore);
+        if (matchingRank) {
+          setPlayerRank(matchingRank);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch rank:", error);
+    }
   }, []);
 
   // Submit score to leaderboard
@@ -199,13 +216,16 @@ export default function AiOrNotPage() {
     setImageError(false);
 
     if (currentRound + 1 >= TOTAL_ROUNDS) {
+      // Calculate final score and fetch rank
+      const finalScore = results.reduce((sum, r) => sum + r.points, 0) + (lastResult?.points || 0);
+      fetchRankForScore(finalScore);
       setPhase("results");
     } else {
       setCurrentRound((prev) => prev + 1);
       setTimeRemaining(TIME_PER_ROUND);
       setPhase("playing");
     }
-  }, [currentRound]);
+  }, [currentRound, results, lastResult, fetchRankForScore]);
 
   // Timer effect
   useEffect(() => {
@@ -535,17 +555,37 @@ export default function AiOrNotPage() {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6 text-center"
               >
-                {/* Score Display */}
+                {/* Score Display with Rank */}
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200 }}
-                  className="rounded-2xl bg-gradient-to-br from-[#00D9FF] to-[#00FF94] p-8 text-white shadow-lg"
+                  className="rounded-2xl bg-gradient-to-br from-[#00D9FF] to-[#00FF94] p-6 md:p-8 text-white shadow-lg"
                 >
-                  <div className="mb-2 text-6xl">{scoreMessage.emoji}</div>
-                  <h2 className="mb-2 text-2xl font-bold">{scoreMessage.title}</h2>
-                  <p className="mb-4 text-white/80">{scoreMessage.description}</p>
-                  <div className="text-5xl font-bold">{totalScore}</div>
+                  {playerRank ? (
+                    <>
+                      {playerRank.imageUrl && (
+                        <div className="mb-4 flex justify-center">
+                          <Image
+                            src={playerRank.imageUrl}
+                            alt={playerRank.title}
+                            width={100}
+                            height={100}
+                            className="rounded-xl"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      <h2 className="mb-2 text-xl md:text-2xl font-bold">{playerRank.title}</h2>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-2 text-5xl md:text-6xl">{scoreMessage.emoji}</div>
+                      <h2 className="mb-2 text-xl md:text-2xl font-bold">{scoreMessage.title}</h2>
+                      <p className="mb-4 text-white/80 text-sm md:text-base">{scoreMessage.description}</p>
+                    </>
+                  )}
+                  <div className="text-4xl md:text-5xl font-bold">{totalScore}</div>
                   <div className="text-sm text-white/60">points</div>
                 </motion.div>
 
