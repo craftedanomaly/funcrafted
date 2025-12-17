@@ -30,7 +30,7 @@ RULES:
 1. Generate EXACTLY 5 realistic production steps specific to that product
 2. Each step = real production phase + environmental cost + cheerful spin
 3. totalImpactValue = realistic CO2 estimate in kg (research typical values)
-4. Assign 1-3 Achievement IDs:
+4. Assign 1-3 Achievement IDs from this list:
    - ACH_PLASTIC: plastic items
    - ACH_TREE_HATER: paper/wood items
    - ACH_TECH_BRO: gadgets, electronics
@@ -43,10 +43,30 @@ RULES:
    - ACH_GOLD: jewelry, precious metals
    - ACH_BATTERY: batteries, EVs
    - ACH_SINGLE_USE: disposables
-   - ACH_ONE_PERCENT: luxury items
-   - ACH_GREENWASH: "eco" products
-   - ACH_NOTHING: if ordering nothing/void
+   - ACH_ONE_PERCENT: luxury items (yacht, mansion, private jet)
+   - ACH_GREENWASH: "eco-friendly" products
+   - ACH_NOTHING: ordering nothing/void/air
    - ACH_CARBON_BABY: if CO2 < 10kg
+   - ACH_SPACE: space-related items (rockets, satellites, Mars colony)
+   - ACH_DICTATOR: thrones, palaces, golden statues, military parades
+   - ACH_TIME: vintage/antique items or futuristic tech
+   - ACH_DOOMSDAY: bunkers, survival gear, apocalypse prep
+   - ACH_VILLAIN: volcano lairs, shark tanks, evil HQ
+   - ACH_CRYPTO: NFTs, Bitcoin miners, blockchain servers
+   - ACH_FLAT: conspiracy theory items
+   - ACH_ALIEN: UFOs, alien tech, Area 51 merch
+   - ACH_NUCLEAR: uranium, reactors, nuclear weapons
+   - ACH_CHILD: cheap toys from sweatshops
+   - ACH_AMAZON: products destroying rainforests
+   - ACH_BLOOD: conflict minerals, blood diamonds
+   - ACH_WHALE: whale products, harpoons
+   - ACH_PANGOLIN: exotic animal products
+   - ACH_OZONE: CFCs, old refrigerators
+   - ACH_MICRO: seafood with microplastics
+   - ACH_COAL: diesel trucks, coal products
+   - ACH_PALM: palm oil products
+   - ACH_SWEAT: ultra-cheap fast fashion
+   - ACH_ELON: Tesla, SpaceX, flamethrowers
 
 OUTPUT ONLY VALID JSON:
 {
