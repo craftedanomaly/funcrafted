@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Trophy, Package, Loader2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
-import confetti from "canvas-confetti";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { generateOrder, OrderResult } from "./actions";
@@ -21,7 +20,9 @@ const COLORS = {
   yellow: "#FEE440",
 };
 
-function celebrate() {
+async function celebrate() {
+  const confettiModule = await import("canvas-confetti");
+  const confetti = confettiModule.default;
   const end = Date.now() + 3000;
   const frame = () => {
     confetti({
