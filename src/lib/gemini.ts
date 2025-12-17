@@ -2,179 +2,108 @@ export type GeminiResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string; isQuotaError: boolean };
 
-const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta";
+const OPENAI_URL = "https://api.openai.com/v1/responses";
 
 // ============================================================================
-// TEXT GENERATION (gemini-2.5-flash) - Free Tier Key with OpenAI Fallback
+// Gemini 2.5 Flash (primary) + GPT-5 Mini fallback (quota/rate-limit only)
 // ============================================================================
 
-function getFlashApiKey(): string | null {
-  return process.env.GEMINI_FLASH_API_KEY || null;
+const getGeminiKey = () => process.env.GEMINI_FLASH_API_KEY || null;
+const getOpenAIKey = () => process.env.OPENAI_API_KEY || null;
+
+// Strict fallback: only 429 and explicit quota errors
+function shouldFallback(status: number, body: string): boolean {
+  if (status === 429) return true;
+  const lower = body.toLowerCase();
+  return lower.includes("resource_exhausted") || 
+         lower.includes("quota") || 
+         lower.includes("rate limit") ||
+         lower.includes("too many requests");
 }
 
-function getOpenAIApiKey(): string | null {
-  return process.env.OPENAI_API_KEY || null;
-}
-
-function isRetryableError(status: number, errorString: string): boolean {
-  return (
-    status === 429 ||
-    status === 500 ||
-    status === 502 ||
-    status === 503 ||
-    errorString.includes("429") ||
-    errorString.includes("RESOURCE_EXHAUSTED") ||
-    errorString.includes("quota") ||
-    errorString.includes("rate limit") ||
-    errorString.includes("Too Many Requests")
-  );
-}
-
-function handleError(error: unknown): GeminiResponse<never> {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorString = String(error);
-
-  const isQuotaError = isRetryableError(0, errorString);
-
-  return { success: false, error: errorMessage, isQuotaError };
-}
-
-function extractText(json: any): string {
+function extractGeminiText(json: any): string {
   const parts = json?.candidates?.[0]?.content?.parts;
   if (!Array.isArray(parts)) return "";
-  return parts
-    .map((p: any) => (typeof p?.text === "string" ? p.text : ""))
-    .filter(Boolean)
-    .join("");
+  return parts.map((p: any) => p?.text || "").filter(Boolean).join("");
 }
 
-/**
- * Fallback to OpenAI GPT-4o-mini when Gemini fails
- */
-async function openAIGenerateText(params: {
-  prompt: string;
-  systemInstruction?: string;
-}): Promise<GeminiResponse<string>> {
-  const apiKey = getOpenAIApiKey();
-  if (!apiKey) {
-    return { success: false, error: "OpenAI API key not configured", isQuotaError: false };
-  }
+function makeError(msg: string, isQuota = false): GeminiResponse<never> {
+  return { success: false, error: msg, isQuotaError: isQuota };
+}
+
+// GPT-5 Mini via Responses API (conservative tokens)
+async function gpt5MiniFallback(prompt: string, system?: string): Promise<GeminiResponse<string>> {
+  const key = getOpenAIKey();
+  if (!key) return makeError("OpenAI API key not configured");
 
   try {
-    const messages: { role: string; content: string }[] = [];
-    if (params.systemInstruction) {
-      messages.push({ role: "system", content: params.systemInstruction });
-    }
-    messages.push({ role: "user", content: params.prompt });
-
+    const input = system ? `${system}\n\n${prompt}` : prompt;
     const res = await fetch(OPENAI_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages,
-        max_tokens: 2000,
-      }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: "gpt-5-mini", input, max_output_tokens: 150 }),
       cache: "no-store",
     });
-
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-      throw new Error(`OpenAI API Error [${res.status}]: ${details}`);
-    }
-
-    const text = json?.choices?.[0]?.message?.content || "";
-    return { success: true, data: text };
-  } catch (error: unknown) {
-    return handleError(error);
+    if (!res.ok) throw new Error(`OpenAI [${res.status}]: ${JSON.stringify(json)}`);
+    return { success: true, data: json?.output_text || "" };
+  } catch (e) {
+    return makeError(e instanceof Error ? e.message : String(e));
   }
 }
 
-/**
- * Generate text using Gemini 2.5 Flash with OpenAI fallback
- */
+// Primary: Gemini 2.5 Flash
 export async function geminiGenerateText(params: {
   prompt: string;
   systemInstruction?: string;
 }): Promise<GeminiResponse<string>> {
-  const geminiKey = getFlashApiKey();
-  
-  // Try Gemini first if key exists
-  if (geminiKey) {
-    try {
-      const model = "gemini-2.5-flash";
-      const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+  const key = getGeminiKey();
+  if (!key) return gpt5MiniFallback(params.prompt, params.systemInstruction);
 
-      const body: any = {
-        contents: [{ role: "user", parts: [{ text: params.prompt }] }],
-      };
-      if (params.systemInstruction) {
-        body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
-      }
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        cache: "no-store",
-      });
-
-      const json = await res.json().catch(() => ({}));
-      
-      // Check if we should fallback to OpenAI
-      if (!res.ok && isRetryableError(res.status, JSON.stringify(json))) {
-        console.log(`Gemini returned ${res.status}, falling back to OpenAI...`);
-        return openAIGenerateText(params);
-      }
-      
-      if (!res.ok) {
-        const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-        throw new Error(`Gemini API Error [${res.status}]: ${details}`);
-      }
-
-      const text = extractText(json);
-      return { success: true, data: text };
-    } catch (error: unknown) {
-      const errorString = String(error);
-      // Fallback to OpenAI on retryable errors
-      if (isRetryableError(0, errorString)) {
-        console.log(`Gemini error, falling back to OpenAI: ${errorString}`);
-        return openAIGenerateText(params);
-      }
-      return handleError(error);
+  try {
+    const url = `${GEMINI_URL}/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+    const body: any = { contents: [{ role: "user", parts: [{ text: params.prompt }] }] };
+    if (params.systemInstruction) {
+      body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
     }
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    const json = await res.json().catch(() => ({}));
+    const jsonStr = JSON.stringify(json);
+
+    // Fallback only on quota/rate-limit
+    if (!res.ok && shouldFallback(res.status, jsonStr)) {
+      return gpt5MiniFallback(params.prompt, params.systemInstruction);
+    }
+    if (!res.ok) return makeError(`Gemini [${res.status}]: ${jsonStr}`);
+
+    return { success: true, data: extractGeminiText(json) };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (shouldFallback(0, msg)) return gpt5MiniFallback(params.prompt, params.systemInstruction);
+    return makeError(msg);
   }
-  
-  // No Gemini key, try OpenAI directly
-  return openAIGenerateText(params);
 }
 
-/**
- * Chat with history using Gemini 2.5 Flash (Free Tier)
- */
+// Chat with history (Gemini only, no fallback for chat)
 export async function geminiChat(params: {
   history: { role: "user" | "model"; parts: { text: string }[] }[];
   message: string;
   systemInstruction?: string;
 }): Promise<GeminiResponse<string>> {
+  const key = getGeminiKey();
+  if (!key) return makeError("GEMINI_FLASH_API_KEY is not configured");
+
   try {
-    const apiKey = getFlashApiKey();
-    if (!apiKey) {
-      return { success: false, error: "GEMINI_FLASH_API_KEY is not configured", isQuotaError: false };
-    }
-    const model = "gemini-2.5-flash";
-    const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const contents = [
-      ...(Array.isArray(params.history) ? params.history : []),
-      { role: "user" as const, parts: [{ text: params.message }] },
-    ];
-
+    const url = `${GEMINI_URL}/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
+    const contents = [...(params.history || []), { role: "user" as const, parts: [{ text: params.message }] }];
     const body: any = { contents };
     if (params.systemInstruction) {
       body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
@@ -188,45 +117,33 @@ export async function geminiChat(params: {
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-      throw new Error(`Gemini API Error [${res.status}]: ${details}`);
-    }
-
-    const text = extractText(json);
-    return { success: true, data: text };
-  } catch (error: unknown) {
-    return handleError(error);
+    if (!res.ok) return makeError(`Gemini [${res.status}]: ${JSON.stringify(json)}`);
+    return { success: true, data: extractGeminiText(json) };
+  } catch (e) {
+    return makeError(e instanceof Error ? e.message : String(e));
   }
 }
 
-/**
- * Analyze image with text using Gemini 2.5 Flash (Free Tier)
- */
+// Analyze image (Gemini only)
 export async function geminiAnalyzeImage(params: {
   prompt: string;
   imageBase64: string;
   mimeType?: string;
   systemInstruction?: string;
 }): Promise<GeminiResponse<string>> {
-  try {
-    const apiKey = getFlashApiKey();
-    if (!apiKey) {
-      return { success: false, error: "GEMINI_FLASH_API_KEY is not configured", isQuotaError: false };
-    }
-    const model = "gemini-2.5-flash";
-    const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const key = getGeminiKey();
+  if (!key) return makeError("GEMINI_FLASH_API_KEY is not configured");
 
+  try {
+    const url = `${GEMINI_URL}/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`;
     const body: any = {
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: params.prompt },
-            { inlineData: { data: params.imageBase64, mimeType: params.mimeType || "image/jpeg" } },
-          ],
-        },
-      ],
+      contents: [{
+        role: "user",
+        parts: [
+          { text: params.prompt },
+          { inlineData: { data: params.imageBase64, mimeType: params.mimeType || "image/jpeg" } },
+        ],
+      }],
     };
     if (params.systemInstruction) {
       body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
@@ -240,44 +157,28 @@ export async function geminiAnalyzeImage(params: {
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-      throw new Error(`Gemini API Error [${res.status}]: ${details}`);
-    }
-
-    const text = extractText(json);
-    return { success: true, data: text };
-  } catch (error: unknown) {
-    return handleError(error);
+    if (!res.ok) return makeError(`Gemini [${res.status}]: ${JSON.stringify(json)}`);
+    return { success: true, data: extractGeminiText(json) };
+  } catch (e) {
+    return makeError(e instanceof Error ? e.message : String(e));
   }
 }
 
 // ============================================================================
-// IMAGE GENERATION (Imagen 3) - Paid Key
+// IMAGE GENERATION (Paid Key)
 // ============================================================================
 
-function getImageApiKey(): string {
-  const apiKey = process.env.GEMINI_IMAGE_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_IMAGE_API_KEY is not configured");
-  }
-  return apiKey;
-}
+const getImageKey = () => process.env.GEMINI_IMAGE_API_KEY || null;
 
-/**
- * Generate image using Gemini 3 Pro Image Preview (Paid Key)
- */
 export async function geminiGenerateImage(params: {
   prompt: string;
 }): Promise<GeminiResponse<{ mimeType: string; base64: string }>> {
-  try {
-    const apiKey = getImageApiKey();
-    const model = "gemini-3-pro-image-preview";
-    const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const key = getImageKey();
+  if (!key) return makeError("GEMINI_IMAGE_API_KEY is not configured");
 
-    const body: any = {
-      contents: [{ role: "user", parts: [{ text: params.prompt }] }],
-    };
+  try {
+    const url = `${GEMINI_URL}/models/gemini-3-pro-image-preview:generateContent?key=${encodeURIComponent(key)}`;
+    const body = { contents: [{ role: "user", parts: [{ text: params.prompt }] }] };
 
     const res = await fetch(url, {
       method: "POST",
@@ -287,10 +188,7 @@ export async function geminiGenerateImage(params: {
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-      throw new Error(`Gemini Image API Error [${res.status}]: ${details}`);
-    }
+    if (!res.ok) return makeError(`Gemini Image [${res.status}]: ${JSON.stringify(json)}`);
 
     const parts = json?.candidates?.[0]?.content?.parts;
     const inlineData = Array.isArray(parts)
@@ -298,12 +196,11 @@ export async function geminiGenerateImage(params: {
       : null;
 
     if (!inlineData?.data || !inlineData?.mimeType) {
-      return { success: false, error: "Image model did not return inlineData", isQuotaError: false };
+      return makeError("Image model did not return inlineData");
     }
-
     return { success: true, data: { mimeType: inlineData.mimeType, base64: inlineData.data } };
-  } catch (error: unknown) {
-    return handleError(error);
+  } catch (e) {
+    return makeError(e instanceof Error ? e.message : String(e));
   }
 }
 
