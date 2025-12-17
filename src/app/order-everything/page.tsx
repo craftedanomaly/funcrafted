@@ -120,7 +120,7 @@ function LeaderboardModal({ isOpen, onClose, entries, isLoading }: { isOpen: boo
                 <div className={`text-2xl font-bold ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-orange-400" : "text-red-400"}`}>#{i + 1}</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white truncate">{entry.nickname}</div>
-                  <div className="text-xs text-red-300 truncate">{(entry as any).itemName || "Unknown"}</div>
+                  <div className="text-xs text-red-300 truncate">ordered: {(entry as any).itemName || "Unknown"}</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-red-200">{entry.score.toLocaleString()}</div>
@@ -244,7 +244,7 @@ export default function OrderEverythingPage() {
     if (!nickname.trim() || !result) return;
     setIsSubmitting(true);
     try {
-      await addLeaderboardEntry(GAME_ID, nickname.trim(), result.totalImpactValue);
+      await addLeaderboardEntry(GAME_ID, nickname.trim(), result.totalImpactValue, orderedItem);
       setSubmitted(true);
       setShowNicknameInput(false);
     } catch (e) { console.error(e); }
@@ -289,7 +289,7 @@ export default function OrderEverythingPage() {
               <div className="flex gap-3">
                 <input type="text" value={itemName} onChange={e => setItemName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleOrder()}
                   placeholder="e.g., Burger, iPhone, Private Jet..." disabled={isLoading}
-                  className="flex-1 px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-lg" />
+                  className="flex-1 px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-purple-400 focus:outline-none text-lg text-gray-900 placeholder:text-gray-400" />
                 <button onClick={handleOrder} disabled={isLoading || !itemName.trim()}
                   className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center gap-2">
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Package className="w-5 h-5" />}
@@ -300,9 +300,9 @@ export default function OrderEverythingPage() {
             </motion.div>
           )}
 
-          {/* Order Tracking */}
-          {result && !showResult && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-3xl p-6 shadow-xl">
+          {/* Order Tracking - Always show when result exists */}
+          {result && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-3xl p-6 shadow-xl mb-6">
               <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                 <Package className="w-6 h-6 text-purple-500" /> Tracking: {orderedItem}
               </h2>
@@ -340,7 +340,7 @@ export default function OrderEverythingPage() {
               {showNicknameInput && !submitted && (
                 <div className="flex gap-2 justify-center mb-4">
                   <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Your shameful name..."
-                    className="px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-red-400 focus:outline-none" maxLength={20} />
+                    className="px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-red-400 focus:outline-none text-gray-900 placeholder:text-gray-400" maxLength={20} />
                   <button onClick={handleSubmitScore} disabled={isSubmitting || !nickname.trim()}
                     className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 disabled:opacity-50">
                     {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit"}

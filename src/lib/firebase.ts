@@ -96,16 +96,21 @@ const SCORE_RANKS_COLLECTION = "scoreRanks";
 export async function addLeaderboardEntry(
   gameId: string,
   nickname: string,
-  score: number
+  score: number,
+  itemName?: string
 ): Promise<string> {
   const db = getDb();
   if (!db) throw new Error("Firebase not configured");
-  const docRef = await addDoc(collection(db, LEADERBOARD_COLLECTION), {
+  const data: any = {
     gameId,
     nickname: nickname.trim().slice(0, 20),
     score,
     createdAt: Timestamp.now(),
-  });
+  };
+  if (itemName) {
+    data.itemName = itemName.trim().slice(0, 50);
+  }
+  const docRef = await addDoc(collection(db, LEADERBOARD_COLLECTION), data);
   return docRef.id;
 }
 
