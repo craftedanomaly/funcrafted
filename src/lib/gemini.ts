@@ -12,14 +12,16 @@ const OPENAI_URL = "https://api.openai.com/v1/responses";
 const getGeminiKey = () => process.env.GEMINI_FLASH_API_KEY || null;
 const getOpenAIKey = () => process.env.OPENAI_API_KEY || null;
 
-// Strict fallback: only 429 and explicit quota errors
+// Fallback: 429, 503, and explicit quota/overload errors
 function shouldFallback(status: number, body: string): boolean {
-  if (status === 429) return true;
+  if (status === 429 || status === 503) return true;
   const lower = body.toLowerCase();
   return lower.includes("resource_exhausted") || 
          lower.includes("quota") || 
          lower.includes("rate limit") ||
-         lower.includes("too many requests");
+         lower.includes("too many requests") ||
+         lower.includes("overloaded") ||
+         lower.includes("unavailable");
 }
 
 function extractGeminiText(json: any): string {
