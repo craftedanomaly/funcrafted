@@ -3,29 +3,39 @@ export type GeminiResponse<T> =
   | { success: false; error: string; isQuotaError: boolean };
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 // ============================================================================
-// TEXT GENERATION (gemini-2.5-flash) - Free Tier Key
+// TEXT GENERATION (gemini-2.5-flash) - Free Tier Key with OpenAI Fallback
 // ============================================================================
 
-function getFlashApiKey(): string {
-  const apiKey = process.env.GEMINI_FLASH_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_FLASH_API_KEY is not configured");
-  }
-  return apiKey;
+function getFlashApiKey(): string | null {
+  return process.env.GEMINI_FLASH_API_KEY || null;
+}
+
+function getOpenAIApiKey(): string | null {
+  return process.env.OPENAI_API_KEY || null;
+}
+
+function isRetryableError(status: number, errorString: string): boolean {
+  return (
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    errorString.includes("429") ||
+    errorString.includes("RESOURCE_EXHAUSTED") ||
+    errorString.includes("quota") ||
+    errorString.includes("rate limit") ||
+    errorString.includes("Too Many Requests")
+  );
 }
 
 function handleError(error: unknown): GeminiResponse<never> {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorString = String(error);
 
-  const isQuotaError =
-    errorString.includes("429") ||
-    errorString.includes("RESOURCE_EXHAUSTED") ||
-    errorString.includes("quota") ||
-    errorString.includes("rate limit") ||
-    errorString.includes("Too Many Requests");
+  const isQuotaError = isRetryableError(0, errorString);
 
   return { success: false, error: errorMessage, isQuotaError };
 }
@@ -40,42 +50,108 @@ function extractText(json: any): string {
 }
 
 /**
- * Generate text using Gemini 2.5 Flash (Free Tier)
+ * Fallback to OpenAI GPT-4o-mini when Gemini fails
  */
-export async function geminiGenerateText(params: {
+async function openAIGenerateText(params: {
   prompt: string;
   systemInstruction?: string;
 }): Promise<GeminiResponse<string>> {
+  const apiKey = getOpenAIApiKey();
+  if (!apiKey) {
+    return { success: false, error: "OpenAI API key not configured", isQuotaError: false };
+  }
+
   try {
-    const apiKey = getFlashApiKey();
-    const model = "gemini-2.5-flash";
-    const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const body: any = {
-      contents: [{ role: "user", parts: [{ text: params.prompt }] }],
-    };
+    const messages: { role: string; content: string }[] = [];
     if (params.systemInstruction) {
-      body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
+      messages.push({ role: "system", content: params.systemInstruction });
     }
+    messages.push({ role: "user", content: params.prompt });
 
-    const res = await fetch(url, {
+    const res = await fetch(OPENAI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages,
+        max_tokens: 2000,
+      }),
       cache: "no-store",
     });
 
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       const details = typeof json === "object" ? JSON.stringify(json) : String(json);
-      throw new Error(`Gemini API Error [${res.status}]: ${details}`);
+      throw new Error(`OpenAI API Error [${res.status}]: ${details}`);
     }
 
-    const text = extractText(json);
+    const text = json?.choices?.[0]?.message?.content || "";
     return { success: true, data: text };
   } catch (error: unknown) {
     return handleError(error);
   }
+}
+
+/**
+ * Generate text using Gemini 2.5 Flash with OpenAI fallback
+ */
+export async function geminiGenerateText(params: {
+  prompt: string;
+  systemInstruction?: string;
+}): Promise<GeminiResponse<string>> {
+  const geminiKey = getFlashApiKey();
+  
+  // Try Gemini first if key exists
+  if (geminiKey) {
+    try {
+      const model = "gemini-2.5-flash";
+      const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`;
+
+      const body: any = {
+        contents: [{ role: "user", parts: [{ text: params.prompt }] }],
+      };
+      if (params.systemInstruction) {
+        body.systemInstruction = { role: "system", parts: [{ text: params.systemInstruction }] };
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      });
+
+      const json = await res.json().catch(() => ({}));
+      
+      // Check if we should fallback to OpenAI
+      if (!res.ok && isRetryableError(res.status, JSON.stringify(json))) {
+        console.log(`Gemini returned ${res.status}, falling back to OpenAI...`);
+        return openAIGenerateText(params);
+      }
+      
+      if (!res.ok) {
+        const details = typeof json === "object" ? JSON.stringify(json) : String(json);
+        throw new Error(`Gemini API Error [${res.status}]: ${details}`);
+      }
+
+      const text = extractText(json);
+      return { success: true, data: text };
+    } catch (error: unknown) {
+      const errorString = String(error);
+      // Fallback to OpenAI on retryable errors
+      if (isRetryableError(0, errorString)) {
+        console.log(`Gemini error, falling back to OpenAI: ${errorString}`);
+        return openAIGenerateText(params);
+      }
+      return handleError(error);
+    }
+  }
+  
+  // No Gemini key, try OpenAI directly
+  return openAIGenerateText(params);
 }
 
 /**
@@ -88,6 +164,9 @@ export async function geminiChat(params: {
 }): Promise<GeminiResponse<string>> {
   try {
     const apiKey = getFlashApiKey();
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_FLASH_API_KEY is not configured", isQuotaError: false };
+    }
     const model = "gemini-2.5-flash";
     const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -132,6 +211,9 @@ export async function geminiAnalyzeImage(params: {
 }): Promise<GeminiResponse<string>> {
   try {
     const apiKey = getFlashApiKey();
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_FLASH_API_KEY is not configured", isQuotaError: false };
+    }
     const model = "gemini-2.5-flash";
     const url = `${BASE_URL}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
