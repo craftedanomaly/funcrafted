@@ -6,7 +6,8 @@ import { ArrowLeft, Trophy, Package, Loader2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { generateOrder, OrderResult } from "./actions";
+import { generateOrder } from "./actions";
+import { OrderResult } from "./constants";
 import { useAchievements, Achievement } from "./useAchievements";
 import { addLeaderboardEntry, getLeaderboard, LeaderboardEntry } from "@/lib/firebase";
 

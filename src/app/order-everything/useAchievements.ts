@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ACHIEVEMENTS, AchievementId } from "./actions";
+import { ACHIEVEMENTS, AchievementId } from "./constants";
 
 const STORAGE_KEY = "order-everything-achievements";
 const LIFETIME_SCORE_KEY = "order-everything-lifetime-score";
