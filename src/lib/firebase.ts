@@ -274,6 +274,7 @@ export const GAME_IDS = {
   AI_OR_NOT: "ai-or-not",
   WHO_AM_I: "who-am-i",
   LOGLINE_CREATOR: "logline-creator",
+  ORDER_EVERYTHING: "order-everything",
 } as const;
 
 export type GameId = (typeof GAME_IDS)[keyof typeof GAME_IDS];

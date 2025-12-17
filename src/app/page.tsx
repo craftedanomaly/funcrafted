@@ -8,6 +8,15 @@ import { Footer } from "@/components/Footer";
 
 // SVG Icons for each game
 const GameIcons = {
+  orderEverything: (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <rect x="20" y="30" width="60" height="45" rx="5" fill="currentColor" opacity="0.3" />
+      <rect x="30" y="20" width="40" height="15" rx="3" fill="currentColor" opacity="0.5" />
+      <circle cx="35" cy="85" r="8" fill="currentColor" opacity="0.6" />
+      <circle cx="65" cy="85" r="8" fill="currentColor" opacity="0.6" />
+      <text x="50" y="60" fontSize="24" fill="currentColor" textAnchor="middle">🔥</text>
+    </svg>
+  ),
   procrastination: (
     <svg viewBox="0 0 100 100" className="w-full h-full">
       <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="4" opacity="0.3" />
@@ -60,6 +69,14 @@ const GameIcons = {
 // Games array - newest first
 const games = [
   {
+    title: "Order Everything",
+    description: "A satirical carbon footprint calculator. Order anything, destroy the planet!",
+    href: "/order-everything",
+    gradient: "from-[#FF6B9D] to-[#9B5DE5]",
+    icon: GameIcons.orderEverything,
+    badge: "New",
+  },
+  {
     title: "Procrastination Simulator",
     description: "An interactive art piece. Watch time slip away as you avoid your tasks.",
     href: "/procrastination-simulator",
@@ -73,7 +90,6 @@ const games = [
     href: "/escape-yourself",
     gradient: "from-[#FF4444] to-[#CC2222]",
     icon: GameIcons.escape,
-    badge: "New",
   },
   {
     title: "AI or Not?",
