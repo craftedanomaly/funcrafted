@@ -6,7 +6,6 @@ import { ArrowLeft, Trophy, Package, Loader2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { generateOrder } from "./actions";
 import { OrderResult } from "./constants";
 import { useAchievements, Achievement } from "./useAchievements";
 import { addLeaderboardEntry, getLeaderboard, LeaderboardEntry } from "@/lib/firebase";
@@ -217,13 +216,19 @@ export default function OrderEverythingPage() {
     setSubmitted(false);
     setOrderedItem(itemName.trim());
 
-    const res = await generateOrder(itemName);
-    setIsLoading(false);
+    try {
+      const response = await fetch("/api/order-everything", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: itemName }),
+      });
+      const res = await response.json();
+      setIsLoading(false);
 
-    if (!res.success) {
-      setError(res.error);
-      return;
-    }
+      if (!res.success) {
+        setError(res.error);
+        return;
+      }
 
     setResult(res.data);
     processOrder(itemName.trim(), res.data.totalImpactValue, res.data.unlockedAchievements);
@@ -237,6 +242,11 @@ export default function OrderEverythingPage() {
     await new Promise(r => setTimeout(r, 500));
     setShowResult(true);
     celebrate();
+    } catch (e) {
+      setIsLoading(false);
+      setError("Failed to process order. Please try again!");
+      console.error(e);
+    }
   };
 
   const handleSubmitScore = async () => {
