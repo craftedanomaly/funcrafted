@@ -179,9 +179,9 @@ async function gpt5MiniFallback(
   try {
     const input: OpenAIInputMessage[] = [
       ...(system
-        ? [{ role: "system", content: [{ type: "text", text: system }] }]
+        ? [{ role: "system" as const, content: [{ type: "text" as const, text: system }] }]
         : []),
-      { role: "user", content: [{ type: "text", text: prompt }] },
+      { role: "user" as const, content: [{ type: "text" as const, text: prompt }] },
     ];
 
     const responsesBody: OpenAIResponsesRequest = {
@@ -232,8 +232,8 @@ async function gpt5MiniFallback(
     const chatBody: OpenAIChatCompletionsRequest = {
       model: getOpenAIFallbackModel(),
       messages: [
-        ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: prompt },
+        ...(system ? [{ role: "system" as const, content: system }] : []),
+        { role: "user" as const, content: prompt },
       ],
       max_tokens: 1500,
       response_format: { type: "json_object" },
