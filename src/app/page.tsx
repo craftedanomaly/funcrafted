@@ -128,10 +128,29 @@ const GameIcons = {
       <circle cx="70" cy="30" r="5" fill="currentColor" opacity="0.5" />
     </svg>
   ),
+  lifeSuggestions: (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.4" />
+      <path d="M50 25 L50 45" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <path d="M50 45 L50 65" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="50" cy="50" r="8" fill="currentColor" />
+      <path d="M30 40 L70 40" stroke="currentColor" strokeWidth="2" opacity="0.5" />
+      <path d="M30 60 L70 60" stroke="currentColor" strokeWidth="2" opacity="0.5" />
+      <text x="50" y="85" fontSize="16" fill="currentColor" textAnchor="middle">LINKED</text>
+    </svg>
+  ),
 };
 
 // Games array - newest first
 const games = [
+  {
+    title: "Life Suggestions",
+    description: "Infinite wisdom generator parodying toxic hustle culture. Corporate synergy guaranteed.",
+    href: "/life-suggestions",
+    gradient: "from-[#0077B5] to-[#00A0DC]",
+    icon: GameIcons.lifeSuggestions,
+    badge: "New",
+  },
   {
     title: "Order Everything",
     description: "A satirical carbon footprint calculator. Order anything, destroy the planet!",

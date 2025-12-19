@@ -2,9 +2,32 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ThumbsUp, MessageCircle, Share2, Send } from "lucide-react";
-import { motion } from "framer-motion";
+import { ThumbsUp, MessageCircle, Share2, Send, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getLifeSuggestions, LifeSuggestion } from "@/lib/firebase";
+
+function SkeletonCard() {
+  return (
+    <div className="animate-pulse">
+      <div className="flex items-start gap-3">
+        <div className="h-12 w-12 rounded-full bg-gray-200" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-32 rounded bg-gray-200" />
+          <div className="h-3 w-48 rounded bg-gray-200" />
+        </div>
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className="h-4 w-full rounded bg-gray-200" />
+        <div className="h-4 w-full rounded bg-gray-200" />
+        <div className="h-4 w-3/4 rounded bg-gray-200" />
+      </div>
+      <div className="mt-4 flex justify-between border-t border-gray-100 pt-3">
+        <div className="h-3 w-20 rounded bg-gray-200" />
+        <div className="h-3 w-32 rounded bg-gray-200" />
+      </div>
+    </div>
+  );
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -149,16 +172,35 @@ export default function LifeSuggestionsClient() {
   const empty = !loading && !error && items.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#f3f2ef]">
+    <div className="min-h-screen bg-gradient-to-b from-[#f3f2ef] to-[#e8e6e1]">
       <div className="mx-auto flex max-w-xl flex-col items-stretch gap-4 px-4 py-10 pb-28">
-        <div className="rounded-xl bg-white px-4 py-3 text-sm text-gray-700 shadow-sm ring-1 ring-gray-200">
-          Infinite Wisdom Generator
-        </div>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-200"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#0077B5] to-[#00A0DC]">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm font-semibold text-gray-900">Infinite Wisdom Generator</span>
+          </div>
+          <a
+            href="/admin"
+            className="text-xs font-medium text-gray-500 hover:text-gray-700"
+          >
+            Admin
+          </a>
+        </motion.div>
 
-        <div className="relative rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-          {loading && (
-            <div className="text-sm text-gray-600">Summoning a thought leader...</div>
-          )}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative overflow-hidden rounded-2xl bg-white p-5 shadow-md ring-1 ring-gray-200"
+        >
+          {loading && <SkeletonCard />}
 
           {error && (
             <div className="space-y-2">
@@ -174,104 +216,137 @@ export default function LifeSuggestionsClient() {
           )}
 
           {empty && (
-            <div className="space-y-2">
+            <div className="space-y-3 text-center py-8">
+              <div className="text-4xl">🧘</div>
               <div className="text-sm font-semibold text-gray-900">No wisdom found</div>
-              <div className="text-sm text-gray-700">
-                Add a few suggestions in the admin panel.
+              <div className="text-sm text-gray-600">
+                The universe is empty. Add some hustle culture wisdom.
               </div>
               <a
-                href="/life-suggestions/admin"
-                className="inline-flex rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white"
+                href="/admin"
+                className="inline-flex rounded-lg bg-gradient-to-r from-[#0077B5] to-[#00A0DC] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:shadow-md transition-shadow"
               >
                 Go to Admin
               </a>
             </div>
           )}
 
-          {!loading && !error && current && (
-            <>
-              <div className="flex items-start gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-full ring-1 ring-gray-200">
-                  <Image
-                    src={display.avatarUrl}
-                    alt={display.authorName}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="truncate text-sm font-semibold text-gray-900">
-                      {display.authorName}
+          <AnimatePresence mode="wait">
+            {!loading && !error && current && (
+              <motion.div
+                key={current.id || idx}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.25 }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full ring-2 ring-gray-100 shadow-sm">
+                    <Image
+                      src={display.avatarUrl}
+                      alt={display.authorName}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="truncate text-sm font-bold text-gray-900">
+                        {display.authorName}
+                      </div>
+                      <span className="inline-flex items-center rounded bg-[#0077B5] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        ✓
+                      </span>
                     </div>
-                    <div className="text-xs text-gray-500">•</div>
-                    <div className="text-xs text-gray-500">{display.time}</div>
-                  </div>
-                  <div className="truncate text-xs text-gray-600">
-                    {display.authorTitle}
+                    <div className="truncate text-xs text-gray-600">
+                      {display.authorTitle}
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-400">{display.time}</div>
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-4 whitespace-pre-line text-[15px] leading-6 text-gray-900">
-                {display.text}
-              </div>
+                <div className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-gray-900">
+                  {display.text}
+                </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-600">
-                <div>{display.likes.toLocaleString()} likes</div>
-                <div>12 comments • 3 reposts</div>
-              </div>
+                <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <span className="inline-flex -space-x-1">
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[8px] text-white ring-1 ring-white">👍</span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] text-white ring-1 ring-white">❤️</span>
+                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[8px] text-white ring-1 ring-white">😂</span>
+                    </span>
+                    <span className="ml-1">{display.likes.toLocaleString()}</span>
+                  </div>
+                  <div>12 comments • 3 reposts</div>
+                </div>
 
-              <div className="mt-2 grid grid-cols-4 gap-1 border-t border-gray-100 pt-2">
-                <motion.button
-                  onClick={onLike}
-                  whileTap={{ scale: 0.98 }}
-                  animate={liked ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.18 }}
-                  className={`flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold transition ${
-                    liked ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
-                  } ${liked ? "scale-[1.02]" : ""}`}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                  Like
-                </motion.button>
-                <button className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                  <MessageCircle className="h-4 w-4" />
-                  Comment
-                </button>
-                <button
-                  onClick={onShare}
-                  className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Share
-                </button>
-                <button className="flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                  <Send className="h-4 w-4" />
-                  Send
-                </button>
-              </div>
-            </>
-          )}
+                <div className="mt-2 grid grid-cols-4 gap-1 border-t border-gray-100 pt-2">
+                  <motion.button
+                    onClick={onLike}
+                    whileTap={{ scale: 0.95 }}
+                    animate={liked ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-semibold transition-all ${
+                      liked ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    <ThumbsUp className={`h-4 w-4 ${liked ? "fill-blue-600" : ""}`} />
+                    <span className="hidden sm:inline">Like</span>
+                  </motion.button>
+                  <button className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="hidden sm:inline">Comment</span>
+                  </button>
+                  <button
+                    onClick={onShare}
+                    className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Share</span>
+                  </button>
+                  <button className="flex items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                    <Send className="h-4 w-4" />
+                    <span className="hidden sm:inline">Send</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {toast && (
-            <div className="pointer-events-none absolute right-4 top-4 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white shadow-lg">
-              {toast}
-            </div>
-          )}
-        </div>
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="pointer-events-none absolute right-4 top-4 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white shadow-lg"
+              >
+                {toast}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
-      <div className="fixed bottom-6 left-0 right-0 z-40 px-4">
-        <button
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="fixed bottom-6 left-0 right-0 z-40 px-4"
+      >
+        <motion.button
           onClick={next}
           disabled={loading || !!error || items.length === 0}
-          className="mx-auto block w-full max-w-xl rounded-2xl bg-gray-900 px-4 py-4 text-center text-base font-bold text-white shadow-lg disabled:opacity-50"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="mx-auto flex w-full max-w-xl items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#0077B5] to-[#00A0DC] px-4 py-4 text-base font-bold text-white shadow-lg disabled:opacity-50 transition-shadow hover:shadow-xl"
         >
-          Next Wisdom 💡
-        </button>
-      </div>
+          <span>Next Wisdom</span>
+          <span className="text-lg">💡</span>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }
