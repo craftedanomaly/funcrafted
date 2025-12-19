@@ -201,7 +201,9 @@ export async function POST(request: NextRequest) {
         parseDebug = err.debug;
       }
 
-      console.error(`[order-everything:${reqId}] RAW AI RESPONSE:\n`, ai.data);
+      if (debugEnabled) {
+        console.error(`[order-everything:${reqId}] RAW AI RESPONSE:\n`, ai.data);
+      }
       throw parseError;
     }
 

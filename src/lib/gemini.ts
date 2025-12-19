@@ -4,10 +4,74 @@ export type GeminiResponse<T> =
 
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta";
 const OPENAI_URL = "https://api.openai.com/v1/responses";
+const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 
-// ============================================================================
-// Gemini 2.5 Flash (primary) + GPT-5 Mini fallback (quota/rate-limit only)
-// ============================================================================
+type GeminiSystemInstruction = {
+  role: "system";
+  parts: { text: string }[];
+};
+
+type GeminiPart =
+  | { text: string }
+  | { inlineData: { data: string; mimeType: string } };
+
+type GeminiContent = { role: string; parts: GeminiPart[] };
+
+type GeminiGenerateContentRequest = {
+  contents: GeminiContent[];
+  systemInstruction?: GeminiSystemInstruction;
+};
+
+type GeminiGenerateContentResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: unknown[];
+    };
+  }>;
+};
+
+type OpenAIResponsesResponse = {
+  output_text?: string;
+  output?: Array<{
+    type?: string;
+    content?: Array<{
+      type?: string;
+      text?: string;
+    }>;
+  }>;
+};
+
+type OpenAIInputMessage = {
+  role: "system" | "user";
+  content: Array<{ type: "text"; text: string }>;
+};
+
+type OpenAIResponsesRequest = {
+  model: string;
+  input: OpenAIInputMessage[];
+  max_output_tokens: number;
+  text?: { format: { type: "json_object" } };
+};
+
+type OpenAIChatMessage = {
+  role: "system" | "user";
+  content: string;
+};
+
+type OpenAIChatCompletionsRequest = {
+  model: string;
+  messages: OpenAIChatMessage[];
+  max_tokens?: number;
+  response_format?: { type: "json_object" };
+};
+
+type OpenAIChatCompletionsResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+};
 
 const getGeminiKey = () => process.env.GEMINI_FLASH_API_KEY || null;
 const getOpenAIKey = () => process.env.OPENAI_API_KEY || null;
@@ -26,19 +90,47 @@ function shouldFallback(status: number, body: string): boolean {
   );
 }
 
-function extractGeminiText(json: any): string {
-  const parts = json?.candidates?.[0]?.content?.parts;
+function makeError(msg: string, isQuota = false): GeminiResponse<never> {
+  return { success: false, error: msg, isQuotaError: isQuota };
+}
+
+function getTextFromGeminiPart(part: unknown): string | null {
+  if (!part || typeof part !== "object") return null;
+  if (!("text" in part)) return null;
+  const text = (part as { text?: unknown }).text;
+  return typeof text === "string" ? text : null;
+}
+
+function isInlineDataPart(
+  part: unknown
+): part is { inlineData: { data: string; mimeType: string } } {
+  if (!part || typeof part !== "object") return false;
+  if (!("inlineData" in part)) return false;
+  const inlineData = (part as { inlineData?: unknown }).inlineData;
+  if (!inlineData || typeof inlineData !== "object") return false;
+  const data = (inlineData as { data?: unknown }).data;
+  const mimeType = (inlineData as { mimeType?: unknown }).mimeType;
+  return typeof data === "string" && typeof mimeType === "string";
+}
+
+function extractGeminiText(json: unknown): string {
+  const parts = (json as GeminiGenerateContentResponse)?.candidates?.[0]?.content
+    ?.parts;
   if (!Array.isArray(parts)) return "";
-  return parts.map((p: any) => p?.text).filter(Boolean).join("");
+  return parts
+    .map(getTextFromGeminiPart)
+    .filter((t): t is string => Boolean(t))
+    .join("");
 }
 
 // Robust Responses API text extraction
-function extractOpenAIResponsesText(json: any): string {
-  if (typeof json?.output_text === "string" && json.output_text.trim()) {
-    return json.output_text;
+function extractOpenAIResponsesText(json: unknown): string {
+  const j = json as OpenAIResponsesResponse;
+  if (typeof j?.output_text === "string" && j.output_text.trim()) {
+    return j.output_text;
   }
 
-  const output = json?.output;
+  const output = j?.output;
   if (!Array.isArray(output)) return "";
 
   const chunks: string[] = [];
@@ -55,8 +147,21 @@ function extractOpenAIResponsesText(json: any): string {
   return chunks.join("");
 }
 
-function makeError(msg: string, isQuota = false): GeminiResponse<never> {
-  return { success: false, error: msg, isQuotaError: isQuota };
+function extractOpenAIChatCompletionsText(json: unknown): string {
+  const j = json as OpenAIChatCompletionsResponse;
+  const content = j?.choices?.[0]?.message?.content;
+  return typeof content === "string" ? content : "";
+}
+
+function looksLikeMissingEndpoint(status: number, body: unknown): boolean {
+  if (status === 404) return true;
+  const s = typeof body === "string" ? body : JSON.stringify(body);
+  const lower = s.toLowerCase();
+  return (
+    lower.includes("not found") ||
+    lower.includes("unknown endpoint") ||
+    lower.includes("no such endpoint")
+  );
 }
 
 // GPT-5 Mini fallback via Responses API (safe + conservative)
@@ -64,43 +169,102 @@ async function gpt5MiniFallback(
   prompt: string,
   system?: string
 ): Promise<GeminiResponse<string>> {
+  if (process.env.NODE_ENV !== "production") {
+    console.error("[gemini] Falling back to GPT-5 Mini");
+  }
+
   const key = getOpenAIKey();
   if (!key) return makeError("OpenAI API key not configured");
 
   try {
-    const input = [
+    const input: OpenAIInputMessage[] = [
       ...(system
         ? [{ role: "system", content: [{ type: "text", text: system }] }]
         : []),
       { role: "user", content: [{ type: "text", text: prompt }] },
     ];
 
-    const res = await fetch(OPENAI_URL, {
+    const responsesBody: OpenAIResponsesRequest = {
+      model: getOpenAIFallbackModel(),
+      input,
+      max_output_tokens: 1500,
+      text: {
+        format: { type: "json_object" },
+      },
+    };
+
+    const responsesRes = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
-      body: JSON.stringify({
-        model: getOpenAIFallbackModel(),
-        input,
-        max_output_tokens: 1500,
-      }),
+      body: JSON.stringify(responsesBody),
       cache: "no-store",
     });
 
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(`OpenAI [${res.status}]: ${JSON.stringify(json)}`);
+    const responsesJson: unknown = await responsesRes.json().catch(() => ({}));
+    if (!responsesRes.ok) {
+      if (looksLikeMissingEndpoint(responsesRes.status, responsesJson)) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[gemini] /v1/responses unavailable; falling back to /v1/chat/completions");
+        }
+      } else {
+        throw new Error(
+          `OpenAI responses [${responsesRes.status}]: ${JSON.stringify(responsesJson)}`
+        );
+      }
+    } else {
+      const text = extractOpenAIResponsesText(responsesJson);
+      if (process.env.NODE_ENV !== "production") {
+        console.error(
+          "[gemini] OpenAI response text length:",
+          text.length,
+          "first 200:",
+          text.slice(0, 200)
+        );
+      }
+      if (text.trim()) {
+        return { success: true, data: text };
+      }
     }
 
-    const text = extractOpenAIResponsesText(json);
-    if (!text.trim()) {
-      console.error("OpenAI empty response:", JSON.stringify(json, null, 2));
+    const chatBody: OpenAIChatCompletionsRequest = {
+      model: getOpenAIFallbackModel(),
+      messages: [
+        ...(system ? [{ role: "system", content: system }] : []),
+        { role: "user", content: prompt },
+      ],
+      max_tokens: 1500,
+      response_format: { type: "json_object" },
+    };
+
+    const chatRes = await fetch(OPENAI_CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify(chatBody),
+      cache: "no-store",
+    });
+
+    const chatJson: unknown = await chatRes.json().catch(() => ({}));
+    if (!chatRes.ok) {
+      throw new Error(
+        `OpenAI chat.completions [${chatRes.status}]: ${JSON.stringify(chatJson)}`
+      );
+    }
+
+    const chatText = extractOpenAIChatCompletionsText(chatJson);
+    if (!chatText.trim()) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("OpenAI empty chat.completions response:", JSON.stringify(chatJson, null, 2));
+      }
       return makeError("OpenAI returned empty response", true);
     }
 
-    return { success: true, data: text };
+    return { success: true, data: chatText };
   } catch (e) {
     return makeError(e instanceof Error ? e.message : String(e));
   }
@@ -110,19 +274,16 @@ async function gpt5MiniFallback(
 // TEXT GENERATION
 // ============================================================================
 
-export async function geminiGenerateText(params: {
+async function geminiGenerateTextWithModel(params: {
   prompt: string;
   systemInstruction?: string;
-}): Promise<GeminiResponse<string>> {
-  const key = getGeminiKey();
-  if (!key) return gpt5MiniFallback(params.prompt, params.systemInstruction);
-
+}, model: string, key: string): Promise<GeminiResponse<string>> {
   try {
-    const url = `${GEMINI_URL}/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
+    const url = `${GEMINI_URL}/models/${model}:generateContent?key=${encodeURIComponent(
       key
     )}`;
 
-    const body: any = {
+    const body: GeminiGenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: params.prompt }] }],
     };
     if (params.systemInstruction) {
@@ -142,26 +303,47 @@ export async function geminiGenerateText(params: {
     const json = await res.json().catch(() => ({}));
     const jsonStr = JSON.stringify(json);
 
-    if (!res.ok && shouldFallback(res.status, jsonStr)) {
-      return gpt5MiniFallback(params.prompt, params.systemInstruction);
-    }
     if (!res.ok) {
-      return makeError(`Gemini [${res.status}]: ${jsonStr}`);
+      return makeError(`Gemini (${model}) [${res.status}]: ${jsonStr}`, shouldFallback(res.status, jsonStr));
     }
 
     const text = extractGeminiText(json);
     if (!text.trim()) {
-      return gpt5MiniFallback(params.prompt, params.systemInstruction);
+      return makeError(`Gemini (${model}) returned empty response`, true);
     }
 
     return { success: true, data: text };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (shouldFallback(0, msg)) {
-      return gpt5MiniFallback(params.prompt, params.systemInstruction);
-    }
-    return makeError(msg);
+
+    return makeError(`Gemini (${model}) error: ${msg}`, shouldFallback(0, msg));
   }
+}
+
+export async function geminiGenerateText(params: {
+  prompt: string;
+  systemInstruction?: string;
+}): Promise<GeminiResponse<string>> {
+  const key = getGeminiKey();
+  if (!key) return gpt5MiniFallback(params.prompt, params.systemInstruction);
+
+  const modelsToTry = ["gemini-3-flash-preview", "gemini-2.5-flash"];
+  let lastGeminiError: GeminiResponse<string> | null = null;
+
+  for (const model of modelsToTry) {
+    const attempt = await geminiGenerateTextWithModel(params, model, key);
+    if (attempt.success) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[gemini] Using model: ${model}`);
+      }
+      return attempt;
+    }
+    lastGeminiError = attempt;
+  }
+
+  const openai = await gpt5MiniFallback(params.prompt, params.systemInstruction);
+  if (openai.success) return openai;
+  return lastGeminiError || openai;
 }
 
 // ============================================================================
@@ -186,7 +368,7 @@ export async function geminiChat(params: {
       { role: "user" as const, parts: [{ text: params.message }] },
     ];
 
-    const body: any = { contents };
+    const body: GeminiGenerateContentRequest = { contents };
     if (params.systemInstruction) {
       body.systemInstruction = {
         role: "system",
@@ -231,7 +413,7 @@ export async function geminiAnalyzeImage(params: {
       key
     )}`;
 
-    const body: any = {
+    const body: GeminiGenerateContentRequest = {
       contents: [
         {
           role: "user",
@@ -291,7 +473,7 @@ export async function geminiGenerateImage(params: {
       key
     )}`;
 
-    const body = {
+    const body: GeminiGenerateContentRequest = {
       contents: [{ role: "user", parts: [{ text: params.prompt }] }],
     };
 
@@ -307,11 +489,10 @@ export async function geminiGenerateImage(params: {
       return makeError(`Gemini Image [${res.status}]: ${JSON.stringify(json)}`);
     }
 
-    const parts = json?.candidates?.[0]?.content?.parts;
+    const parts = (json as GeminiGenerateContentResponse)?.candidates?.[0]?.content
+      ?.parts;
     const inlineData = Array.isArray(parts)
-      ? parts.find(
-          (p: any) => p?.inlineData?.data && p?.inlineData?.mimeType
-        )?.inlineData
+      ? parts.find(isInlineDataPart)?.inlineData
       : null;
 
     if (!inlineData?.data || !inlineData?.mimeType) {
