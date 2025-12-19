@@ -128,15 +128,14 @@ export default function LifeSuggestionsClient() {
     const text = buildPostText(current);
 
     try {
-      if (typeof navigator !== "undefined" && "share" in navigator) {
-        await (navigator as Navigator & { share: (data: { text: string }) => Promise<void> }).share({
-          text,
-        });
+      const nav = typeof window !== "undefined" ? window.navigator : undefined;
+      if (nav && "share" in nav && typeof nav.share === "function") {
+        await nav.share({ text });
         return;
       }
 
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+      if (nav?.clipboard?.writeText) {
+        await nav.clipboard.writeText(text);
         showToast("LinkedOut Post Copied!");
         return;
       }
