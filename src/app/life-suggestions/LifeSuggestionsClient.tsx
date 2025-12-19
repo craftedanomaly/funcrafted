@@ -186,12 +186,6 @@ export default function LifeSuggestionsClient() {
             </div>
             <span className="text-sm font-semibold text-gray-900">Infinite Wisdom Generator</span>
           </div>
-          <a
-            href="/admin"
-            className="text-xs font-medium text-gray-500 hover:text-gray-700"
-          >
-            Admin
-          </a>
         </motion.div>
 
         <motion.div

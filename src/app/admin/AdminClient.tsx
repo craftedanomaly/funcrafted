@@ -169,8 +169,26 @@ export default function AdminClient() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [authError, setAuthError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("admin_credentials");
+    if (saved) {
+      try {
+        const { u, p } = JSON.parse(saved);
+        if (u && p) {
+          setUsername(u);
+          setPassword(p);
+          setRememberMe(true);
+        }
+      } catch {
+        localStorage.removeItem("admin_credentials");
+      }
+    }
+  }, []);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"images" | "leaderboard" | "ranks" | "suggestions">("images");
@@ -285,6 +303,12 @@ export default function AdminClient() {
 
       const data = await res.json();
       if (data.success) {
+        // Save or clear credentials based on rememberMe
+        if (rememberMe) {
+          localStorage.setItem("admin_credentials", JSON.stringify({ u: username, p: password }));
+        } else {
+          localStorage.removeItem("admin_credentials");
+        }
         setIsAuthenticated(true);
         setImages(data.data.images || []);
         fetchLeaderboard();
@@ -704,6 +728,16 @@ export default function AdminClient() {
                 required
               />
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-[#76D95B] focus:ring-[#76D95B]"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Remember me</span>
+            </label>
 
             {authError && (
               <p className="text-center text-sm text-red-500">{authError}</p>
