@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { getGameLayout, GameLayoutItem } from "@/lib/firebase";
 
 // FunStats component with live play count
 function FunStats() {
@@ -277,6 +278,40 @@ function GameCard({
 }
 
 export default function Home() {
+  const [layout, setLayout] = useState<GameLayoutItem[]>([]);
+
+  useEffect(() => {
+    async function fetchLayout() {
+      try {
+        const data = await getGameLayout();
+        if (data.length > 0) {
+          setLayout(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch layout:", e);
+      }
+    }
+    fetchLayout();
+  }, []);
+
+  // Sort and filter games based on layout from Firebase
+  const sortedGames = useMemo(() => {
+    if (layout.length === 0) {
+      // No layout saved, use default order
+      return games;
+    }
+
+    // Create a map of game href to game data
+    const gameMap = new Map(games.map((g) => [g.href.replace("/", ""), g]));
+
+    // Sort games based on layout order and filter by visibility
+    return layout
+      .filter((item) => item.visible)
+      .sort((a, b) => a.order - b.order)
+      .map((item) => gameMap.get(item.id))
+      .filter((g): g is (typeof games)[0] => g !== undefined);
+  }, [layout]);
+
   return (
     <div className="min-h-screen bg-[#0D0D0D] dark:bg-[#0D0D0D]">
       <Header />
@@ -325,7 +360,7 @@ export default function Home() {
 
         {/* Uniform Grid - 3 columns on desktop, 2 on tablet, 1 on mobile */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {games.map((game, index) => (
+          {sortedGames.map((game, index) => (
             <GameCard
               key={game.href}
               {...game}

@@ -432,3 +432,41 @@ export async function deleteLifeSuggestion(id: string): Promise<void> {
   if (!db) throw new Error("Firebase not configured");
   await deleteDoc(doc(db, SUGGESTIONS_COLLECTION, id));
 }
+
+// ============ Homepage Layout Order ============
+
+export interface GameLayoutItem {
+  id: string;
+  order: number;
+  visible: boolean;
+}
+
+const LAYOUT_COLLECTION = "siteConfig";
+const LAYOUT_DOC = "gameLayout";
+
+export async function getGameLayout(): Promise<GameLayoutItem[]> {
+  const db = getDb();
+  if (!db) return [];
+
+  try {
+    const docRef = doc(db, LAYOUT_COLLECTION, LAYOUT_DOC);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      if (Array.isArray(data.games)) {
+        return data.games as GameLayoutItem[];
+      }
+    }
+  } catch (e) {
+    console.error("Failed to get game layout:", e);
+  }
+  return [];
+}
+
+export async function saveGameLayout(games: GameLayoutItem[]): Promise<void> {
+  const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
+
+  const docRef = doc(db, LAYOUT_COLLECTION, LAYOUT_DOC);
+  await setDoc(docRef, { games, updatedAt: Timestamp.now() });
+}

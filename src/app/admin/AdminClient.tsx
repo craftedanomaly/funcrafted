@@ -12,7 +12,6 @@ import {
   Plus,
   Image as ImageIcon,
   Loader2,
-  ExternalLink,
   X,
   CheckCircle,
   AlertCircle,
@@ -25,6 +24,11 @@ import {
   Save,
   AlertTriangle,
   Lightbulb,
+  LayoutGrid,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -32,6 +36,9 @@ import {
   addLifeSuggestion,
   deleteLifeSuggestion,
   LifeSuggestion,
+  getGameLayout,
+  saveGameLayout,
+  GameLayoutItem,
 } from "@/lib/firebase";
 
 interface ImageItem {
@@ -191,7 +198,7 @@ export default function AdminClient() {
   }, []);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"images" | "leaderboard" | "ranks" | "suggestions">("images");
+  const [activeTab, setActiveTab] = useState<"images" | "leaderboard" | "ranks" | "suggestions" | "layout">("images");
 
   // AI or Not State
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -219,12 +226,18 @@ export default function AdminClient() {
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const didInitSuggestionsRef = useRef(false);
 
+  // Layout State
+  const [gameLayout, setGameLayout] = useState<GameLayoutItem[]>([]);
+  const [layoutSaving, setLayoutSaving] = useState(false);
+  const [layoutDirty, setLayoutDirty] = useState(false);
+
   const getAuthHeader = useCallback(() => {
     return "Basic " + btoa(`${username}:${password}`);
   }, [username, password]);
 
   // --- Fetchers ---
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -283,6 +296,61 @@ export default function AdminClient() {
     }
   }, []);
 
+  // Default games list for layout
+  const defaultGames = [
+    { id: "life-suggestions", order: 0, visible: true },
+    { id: "order-everything", order: 1, visible: true },
+    { id: "procrastination-simulator", order: 2, visible: true },
+    { id: "escape-yourself", order: 3, visible: true },
+    { id: "ai-or-not", order: 4, visible: true },
+    { id: "logline-slots", order: 5, visible: true },
+    { id: "who-am-i", order: 6, visible: true },
+  ];
+
+  const fetchLayout = useCallback(async () => {
+    try {
+      const layout = await getGameLayout();
+      if (layout.length > 0) {
+        setGameLayout(layout);
+      } else {
+        setGameLayout(defaultGames);
+      }
+      setLayoutDirty(false);
+    } catch (e) {
+      console.error("Failed to fetch layout:", e);
+      setGameLayout(defaultGames);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSaveLayout = async () => {
+    setLayoutSaving(true);
+    try {
+      await saveGameLayout(gameLayout);
+      setLayoutDirty(false);
+    } catch (e) {
+      console.error("Failed to save layout:", e);
+    }
+    setLayoutSaving(false);
+  };
+
+  const moveGame = (index: number, direction: "up" | "down") => {
+    const newLayout = [...gameLayout];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newLayout.length) return;
+    [newLayout[index], newLayout[targetIndex]] = [newLayout[targetIndex], newLayout[index]];
+    newLayout.forEach((g, i) => (g.order = i));
+    setGameLayout(newLayout);
+    setLayoutDirty(true);
+  };
+
+  const toggleGameVisibility = (index: number) => {
+    const newLayout = [...gameLayout];
+    newLayout[index].visible = !newLayout[index].visible;
+    setGameLayout(newLayout);
+    setLayoutDirty(true);
+  };
+
   // --- Auth ---
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -314,7 +382,7 @@ export default function AdminClient() {
         fetchLeaderboard();
         fetchScoreRanks();
       }
-    } catch (error) {
+    } catch {
       setAuthError("Connection error");
     }
     setIsLoading(false);
@@ -464,7 +532,7 @@ export default function AdminClient() {
         } else {
           updateUploadItem(item.id, { status: "error", error: data.error || "Upload failed" });
         }
-      } catch (error) {
+      } catch {
         updateUploadItem(item.id, { status: "error", error: "Network error" });
       }
     }
@@ -824,6 +892,20 @@ export default function AdminClient() {
           >
             <Lightbulb className="h-4 w-4" />
             Life Suggestions
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("layout");
+              fetchLayout();
+            }}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${
+              activeTab === "layout"
+                ? "bg-[#9B5DE5] text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            Homepage Layout
           </button>
         </div>
 
@@ -1307,7 +1389,7 @@ export default function AdminClient() {
                               const data = await res.json();
                               if (data.success) updateRankField(idx, "imageUrl", data.data.url);
                               else alert(data.error || "Upload failed");
-                            } catch (err) { alert("Upload failed"); }
+                            } catch { alert("Upload failed"); }
                             e.target.value = "";
                           }} />
                         </label>
@@ -1318,6 +1400,130 @@ export default function AdminClient() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- Layout Tab --- */}
+        {activeTab === "layout" && (
+          <div className="rounded-2xl bg-gray-800 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Homepage Game Order</h2>
+                <p className="text-sm text-gray-400">Drag games to reorder or toggle visibility</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={fetchLayout}
+                  className="flex items-center gap-2 rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-600"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </button>
+                <button
+                  onClick={handleSaveLayout}
+                  disabled={layoutSaving || !layoutDirty}
+                  className="flex items-center gap-2 rounded-lg bg-[#9B5DE5] px-4 py-2 text-sm font-semibold text-white hover:bg-[#8a4dd4] disabled:opacity-50"
+                >
+                  {layoutSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {layoutDirty ? "Save Changes" : "Saved"}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {gameLayout.map((game, index) => {
+                const gameNames: Record<string, string> = {
+                  "life-suggestions": "Life Suggestions",
+                  "order-everything": "Order Everything",
+                  "procrastination-simulator": "Procrastination Simulator",
+                  "escape-yourself": "Escape Yourself",
+                  "ai-or-not": "AI or Not?",
+                  "logline-slots": "Logline Creator",
+                  "who-am-i": "Who Am I?",
+                };
+                const gameColors: Record<string, string> = {
+                  "life-suggestions": "from-[#0077B5] to-[#00A0DC]",
+                  "order-everything": "from-[#FF6B9D] to-[#9B5DE5]",
+                  "procrastination-simulator": "from-[#6B8E7B] to-[#4A6B5A]",
+                  "escape-yourself": "from-[#FF4444] to-[#CC2222]",
+                  "ai-or-not": "from-[#00D9FF] to-[#0099CC]",
+                  "logline-slots": "from-[#FF8534] to-[#CC6A2A]",
+                  "who-am-i": "from-[#FF6B9D] to-[#C44DFF]",
+                };
+
+                return (
+                  <motion.div
+                    key={game.id}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex items-center gap-4 rounded-xl p-4 transition-all ${
+                      game.visible ? "bg-gray-700" : "bg-gray-700/50"
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => moveGame(index, "up")}
+                        disabled={index === 0}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-600 hover:text-white disabled:opacity-30"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => moveGame(index, "down")}
+                        disabled={index === gameLayout.length - 1}
+                        className="rounded p-1 text-gray-400 hover:bg-gray-600 hover:text-white disabled:opacity-30"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${gameColors[game.id] || "from-gray-500 to-gray-600"} flex items-center justify-center`}>
+                      <span className="text-lg font-bold text-white">{index + 1}</span>
+                    </div>
+
+                    <div className="flex-1">
+                      <div className={`font-semibold ${game.visible ? "text-white" : "text-gray-500"}`}>
+                        {gameNames[game.id] || game.id}
+                      </div>
+                      <div className="text-xs text-gray-500">/{game.id}</div>
+                    </div>
+
+                    <button
+                      onClick={() => toggleGameVisibility(index)}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                        game.visible
+                          ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                          : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                      }`}
+                    >
+                      {game.visible ? (
+                        <>
+                          <Eye className="h-4 w-4" />
+                          Visible
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="h-4 w-4" />
+                          Hidden
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {gameLayout.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <LayoutGrid className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No layout data found. Click Refresh to load.</p>
               </div>
             )}
           </div>
