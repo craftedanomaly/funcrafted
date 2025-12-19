@@ -42,13 +42,13 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const ext = file.name.split(".").pop() || "png";
     const imageId = generateImageId();
-    const filename = `rank-images/${imageId}.${ext}`;
+    const key = `rank-images/${imageId}.${ext}`;
 
-    const url = await uploadImage(arrayBuffer, filename, file.type);
+    const url = await uploadImage(arrayBuffer, imageId, file.type, key);
 
     return NextResponse.json({
       success: true,
-      data: { url, filename },
+      data: { url, filename: key },
     });
   } catch (error) {
     console.error("Rank image upload error:", error);

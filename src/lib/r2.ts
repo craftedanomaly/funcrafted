@@ -14,24 +14,11 @@ function getR2Endpoint(): string {
   return `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 }
 
-function getAuthHeaders(method: string, path: string, contentType?: string): HeadersInit {
-  const date = new Date().toUTCString();
-  const headers: HeadersInit = {
-    "x-amz-date": date,
-    "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
-  };
-  if (contentType) {
-    headers["Content-Type"] = contentType;
-  }
-  return headers;
-}
-
 // Simple AWS Signature V4 implementation for R2
 async function signRequest(
   method: string,
   path: string,
-  headers: Record<string, string>,
-  body?: ArrayBuffer | string
+  headers: Record<string, string>
 ): Promise<Record<string, string>> {
   const encoder = new TextEncoder();
   const algorithm = "AWS4-HMAC-SHA256";
@@ -208,11 +195,12 @@ export async function saveManifest(manifest: ImageManifest): Promise<boolean> {
 export async function uploadImage(
   file: ArrayBuffer,
   filename: string,
-  contentType: string
+  contentType: string,
+  customKey?: string
 ): Promise<string | null> {
   try {
     const endpoint = getR2Endpoint();
-    const key = `ai-or-not/images/${filename}`;
+    const key = customKey || `ai-or-not/images/${filename}`;
     const path = `/${R2_BUCKET_NAME}/${key}`;
     const url = `${endpoint}${path}`;
     
