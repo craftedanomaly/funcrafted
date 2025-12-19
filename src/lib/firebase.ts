@@ -103,7 +103,7 @@ export async function addLeaderboardEntry(
 ): Promise<string> {
   const db = getDb();
   if (!db) throw new Error("Firebase not configured");
-  const data: any = {
+  const data: Record<string, unknown> = {
     gameId,
     nickname: nickname.trim().slice(0, 20),
     score,
@@ -372,4 +372,63 @@ export async function getAllGameStats(): Promise<{ gameId: string; playCount: nu
   });
   
   return stats;
+}
+
+export interface LifeSuggestion {
+  id?: string;
+  text: string;
+  authorName?: string;
+  authorTitle?: string;
+  likes?: number;
+}
+
+const SUGGESTIONS_COLLECTION = "suggestions";
+
+export async function getLifeSuggestions(): Promise<LifeSuggestion[]> {
+  const db = getDb();
+  if (!db) return [];
+
+  const snapshot = await getDocs(collection(db, SUGGESTIONS_COLLECTION));
+  return snapshot.docs
+    .map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      const text = typeof data.text === "string" ? data.text : "";
+      const authorName = typeof data.authorName === "string" ? data.authorName : undefined;
+      const authorTitle = typeof data.authorTitle === "string" ? data.authorTitle : undefined;
+      const likes = typeof data.likes === "number" ? data.likes : undefined;
+      return {
+        id: d.id,
+        text,
+        ...(authorName ? { authorName } : {}),
+        ...(authorTitle ? { authorTitle } : {}),
+        ...(typeof likes === "number" ? { likes } : {}),
+      };
+    })
+    .filter((s) => s.text.trim().length > 0);
+}
+
+export async function addLifeSuggestion(input: {
+  text: string;
+  authorName?: string;
+  authorTitle?: string;
+  likes?: number;
+}): Promise<string> {
+  const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
+
+  const payload: Record<string, unknown> = {
+    text: input.text,
+  };
+  if (input.authorName && input.authorName.trim()) payload.authorName = input.authorName.trim();
+  if (input.authorTitle && input.authorTitle.trim()) payload.authorTitle = input.authorTitle.trim();
+  if (typeof input.likes === "number" && Number.isFinite(input.likes)) payload.likes = input.likes;
+
+  const docRef = await addDoc(collection(db, SUGGESTIONS_COLLECTION), payload);
+  return docRef.id;
+}
+
+export async function deleteLifeSuggestion(id: string): Promise<void> {
+  const db = getDb();
+  if (!db) throw new Error("Firebase not configured");
+  await deleteDoc(doc(db, SUGGESTIONS_COLLECTION, id));
 }
