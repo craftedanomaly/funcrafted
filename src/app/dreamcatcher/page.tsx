@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './dream.module.css';
 import { Camera, Upload, Sparkles, Loader2, Volume2, VolumeX, ArrowRight, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -113,8 +114,21 @@ export default function DreamcatcherPage() {
                 throw new Error('No dream image returned');
             }
         } catch (err: any) {
-            setError("I'm awake right now. Try again in a minute.");
-            setStep('PROMPT');
+            const msg = err.message || 'Something went wrong in the dream realm.';
+            setError(msg);
+
+            // If strict rate limit, maybe we don't return to PROMPT step?
+            // "The UI should look mysterious but final. No retry button, no bypass option."
+            if (msg.includes("How many dreams")) {
+                setStep('LANDING'); // Reset or something? 
+                // Actually user said "display it to the user in a Toast notification or a clean Modal".
+                // And "No retry button".
+                // I'll keep the error state visible in the prompt screen or create a new 'LIMIT_REACHED' step?
+                // A toast/modal approach implies overlay.
+                // Let's create a blocking modal state if this error occurs.
+            } else {
+                setStep('PROMPT');
+            }
         }
     };
 
@@ -140,6 +154,19 @@ export default function DreamcatcherPage() {
 
             {step !== 'RESULT' && (
                 <h1 className={styles.mainTitle}>CATCH YOUR DREAM</h1>
+            )}
+
+            {/* Rate Limit Modal */}
+            {error && error.includes("How many dreams") && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="max-w-md p-8 text-center border border-white/10 rounded-2xl bg-white/5 shadow-2xl">
+                        <h3 className="text-2xl text-purple-300 font-light mb-4 font-serif">Destiny Paused</h3>
+                        <p className="text-white/80 text-lg leading-relaxed tracking-wide">
+                            {error}
+                        </p>
+                        <div className="mt-8 w-24 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent mx-auto opacity-50" />
+                    </div>
+                </div>
             )}
 
             <main className="relative z-10 w-full flex flex-col items-center justify-center p-4">
@@ -304,6 +331,10 @@ export default function DreamcatcherPage() {
                                         Dream Again
                                     </button>
                                 </div>
+
+                                <div className="mt-8 w-full max-w-md">
+                                    <ExhibitSection image={resultImage} />
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -312,3 +343,68 @@ export default function DreamcatcherPage() {
         </div>
     );
 }
+
+function ExhibitSection({ image }: { image: string }) {
+    const [isExhibiting, setIsExhibiting] = useState(false);
+    const [username, setUsername] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const router = useRouter();
+
+    const handleExhibit = async () => {
+        if (!username.trim()) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/dreamcatcher/exhibit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image, username })
+            });
+            if (res.ok) {
+                router.push('/dreamcatcher/gallery');
+            } else {
+                alert("Failed to exhibit. Try again.");
+                setIsSubmitting(false);
+            }
+        } catch (e) {
+            console.error(e);
+            setIsSubmitting(false);
+        }
+    };
+
+    if (isExhibiting) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-3 bg-white/5 p-6 rounded-2xl border border-white/10"
+            >
+                <h3 className="text-white/80 text-sm tracking-wide text-center uppercase">Join the Dream Wall</h3>
+                <input
+                    type="text"
+                    placeholder="Your Name / Dreamer Name"
+                    className={styles.input}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    maxLength={20}
+                />
+                <button
+                    onClick={handleExhibit}
+                    disabled={isSubmitting || !username.trim()}
+                    className={`${styles.button} w-full py-3 text-sm`}
+                >
+                    {isSubmitting ? <Loader2 className="animate-spin mx-auto w-5 h-5" /> : "Exhibit Dream"}
+                </button>
+            </motion.div>
+        )
+    }
+
+    return (
+        <button
+            onClick={() => setIsExhibiting(true)}
+            className="w-full py-4 border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 rounded-xl transition-all uppercase tracking-[0.2em] font-light text-sm shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.3)]"
+        >
+            Exhibit Your Dream
+        </button>
+    )
+}
+
