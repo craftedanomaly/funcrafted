@@ -1,34 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const maxDuration = 60; // Allow longer timeout for image generation
+// Allow extremely long timeout for retries (20s * 3 + delays)
+export const maxDuration = 60;
 
-export async function POST(req: NextRequest) {
-    try {
-        const { image, prompt } = await req.json();
+// Helper for delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-        if (!prompt) {
-            return NextResponse.json(
-                { error: 'Missing prompt' },
-                { status: 400 }
-            );
-        }
+async function generateWithGemini(apiKey: string, image: string | null, prompt: string) {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
 
-        const apiKey = process.env.GEMINI_IMAGE_API_KEY;
-        if (!apiKey) {
-            return NextResponse.json(
-                { error: 'Server configuration error: Missing API Key' },
-                { status: 500 }
-            );
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
-
-        // Construct the prompt for the "Nano Banana Pro"
-        let systemInstruction = `
+    let systemInstruction = `
       You are a comic book artist in the style of Mike Mignola (Hellboy). 
-      Create a single-page comic strip (6-9 panels) based on the dream description.
+      Create a single-page comic strip (4-6 panels) based on the dream description.
       
       Visual Style:
       - Gothic Expressionism (Mike Mignola style).
@@ -40,72 +25,150 @@ export async function POST(req: NextRequest) {
       - Adapting the following dream description: "${prompt}"
     `;
 
-        if (image) {
-            systemInstruction += `
+    if (image) {
+        systemInstruction += `
         Subject:
         - The character in the comic SHOULD RESEMBLE the person in the provided image. Use the provided image as a strong character reference.
         `;
-        }
+    }
 
-        systemInstruction += `
+    systemInstruction += `
       Output:
       - Return ONLY the generated image of the comic page.
     `;
 
-        const parts: any[] = [{ text: systemInstruction }];
+    const parts: any[] = [{ text: systemInstruction }];
 
-        if (image) {
-            parts.push({
-                inlineData: {
-                    data: image,
-                    mimeType: 'image/jpeg',
-                },
-            });
+    if (image) {
+        parts.push({
+            inlineData: {
+                data: image,
+                mimeType: 'image/jpeg',
+            },
+        });
+    }
+
+    console.log('Sending request to Gemini...');
+    const result = await model.generateContent(parts);
+    const response = await result.response;
+
+    // Extract image
+    const responseParts = response.candidates?.[0]?.content?.parts;
+    const generatedImagePart = responseParts?.find(p => p.inlineData);
+
+    if (generatedImagePart && generatedImagePart.inlineData) {
+        return generatedImagePart.inlineData.data;
+    }
+
+    throw new Error('Gemini did not return an image inlineData.');
+}
+
+async function generateWithOpenAI(apiKey: string, prompt: string) {
+    console.log('Falling back to OpenAI...');
+    // Note: Standard OpenAI Image API does not support image input for generation easily (only edit/variation).
+    // We will use the prompt-only generation for fallback to ensure success.
+
+    const enhancedPrompt = `
+    Comic book page, Mike Mignola style, Gothic Expressionism. 
+    Heavy shadows, high contrast, muted colors. 
+    Subject: ${prompt}. 
+    4-6 panels, single page.
+    `;
+
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: "gpt-image-1.5-2025-12-16", // User specified model
+            prompt: enhancedPrompt,
+            n: 1,
+            size: "1024x1024",
+            response_format: "b64_json"
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI Error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].b64_json;
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const { image, prompt } = await req.json();
+
+        if (!prompt) {
+            return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
         }
 
-        console.log('Sending request to Gemini...');
+        const geminiKey = process.env.GEMINI_IMAGE_API_KEY;
+        const openAIKey = process.env.OPENAI_API_KEY;
 
-        // Note: ensure the model supports 'generateContent' with multimodal inputs for image generation
-        const result = await model.generateContent(parts);
-        const response = await result.response;
-
-        console.log('Gemini response received.');
-
-        // Typically, image generation models might return the image in the response parts.
-        // We check for inlineData in the first part of the first candidate.
-        // Adjusting for potential response structure differences.
-        // If the library/model returns a specific 'images' field, we might need to handle that, 
-        // but for 'generateContent', it usually comes back as a part.
-
-        /* 
-          ATTENTION: If the model returns multiple parts or a different structure for images, 
-          this traversal might need adjustment. 
-          Commonly for image gen models in this SDK: response.text() might be empty, but parts will have data.
-        */
-
-        // Let's try to find an image part
-        const responseParts = response.candidates?.[0]?.content?.parts;
-        const generatedImagePart = responseParts?.find(p => p.inlineData);
-
-        if (generatedImagePart && generatedImagePart.inlineData) {
-            return NextResponse.json({
-                image: generatedImagePart.inlineData.data
-            });
+        if (!geminiKey) {
+            return NextResponse.json({ error: 'Server configuration error: Missing Gemini API Key' }, { status: 500 });
         }
 
-        // Fallback: Check if it returned a textURL or something else? 
-        // Sometimes it returns binary data directly if using REST, but SDK wraps it.
+        // Attempt 1: Gemini
+        try {
+            const imageBase64 = await generateWithGemini(geminiKey, image, prompt);
+            return NextResponse.json({ image: imageBase64 });
+        } catch (err1) {
+            console.error('Gemini Attempt 1 failed:', err1);
 
-        console.warn('No inline image data found in response. Dump:', JSON.stringify(response));
-        return NextResponse.json(
-            { error: 'Failed to generate image. No image data returned.' },
-            { status: 500 }
-        );
+            // Wait 5 seconds
+            await delay(5000);
+
+            // Attempt 2: Gemini
+            try {
+                console.log('Retrying Gemini (Attempt 2)...');
+                const imageBase64 = await generateWithGemini(geminiKey, image, prompt);
+                return NextResponse.json({ image: imageBase64 });
+            } catch (err2) {
+                console.error('Gemini Attempt 2 failed:', err2);
+
+                // Wait 5 seconds
+                await delay(5000);
+
+                // Attempt 3: Gemini
+                try {
+                    console.log('Retrying Gemini (Attempt 3)...');
+                    const imageBase64 = await generateWithGemini(geminiKey, image, prompt);
+                    return NextResponse.json({ image: imageBase64 });
+                } catch (err3) {
+                    console.error('Gemini Attempt 3 failed:', err3);
+
+                    // Fallback: OpenAI
+                    if (openAIKey) {
+                        try {
+                            const imageBase64 = await generateWithOpenAI(openAIKey, prompt);
+                            return NextResponse.json({ image: imageBase64 });
+                        } catch (errOpenAI) {
+                            console.error('OpenAI Fallback failed:', errOpenAI);
+                            // Final error catch below
+                        }
+                    } else {
+                        console.warn('OpenAI Key not present for fallback.');
+                    }
+
+                    // If we reached here, everything failed.
+                    return NextResponse.json(
+                        { error: "I'm awake right now. Try again in a minute." },
+                        { status: 500 }
+                    );
+                }
+            }
+        }
 
     } catch (error: any) {
         console.error('API Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
+            { error: "I'm awake right now. Try again in a minute." },
             { status: 500 }
         );
     }

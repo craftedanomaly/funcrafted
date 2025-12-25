@@ -291,7 +291,14 @@ export default function DreamcatcherPage() {
                                     Explore <ArrowRight size={14} />
                                 </a>
 
-                                <div className="mt-8">
+                                <div className="mt-8 flex flex-col items-center gap-4">
+                                    <a
+                                        href={resultImage}
+                                        download="dreamcatcher_comic.png"
+                                        className="text-white/60 hover:text-white underline text-sm tracking-widest uppercase"
+                                    >
+                                        Download Comic
+                                    </a>
                                     <button onClick={reset} className="text-white/40 hover:text-white/80 transition-colors text-xs tracking-widest uppercase">
                                         Dream Again
                                     </button>
