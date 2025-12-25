@@ -14,7 +14,7 @@ async function generateWithGemini(apiKey: string, image: string | null, prompt: 
 
     let systemInstruction = `
       You are a comic book artist in the style of Mike Mignola (Hellboy). 
-      Create a single-page comic strip (4-6 panels) based on the dream description.
+      Create a single-page comic strip (4-8 panels) based on the dream description.
       
       Visual Style:
       - Gothic Expressionism (Mike Mignola style).
