@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './dream.module.css';
-import { Camera, Upload, Sparkles, Loader2, Volume2, VolumeX, ArrowRight } from 'lucide-react';
+import { Camera, Upload, Sparkles, Loader2, Volume2, VolumeX, ArrowRight, Download } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -271,13 +271,21 @@ export default function DreamcatcherPage() {
                             transition={{ duration: 1.2, ease: "easeOut" }}
                             className="flex flex-col items-center w-full"
                         >
-                            <div className="relative w-full max-w-4xl shadow-2xl rounded-sm overflow-hidden flex justify-center">
+                            <div className="relative w-full max-w-4xl shadow-2xl rounded-sm overflow-hidden flex justify-center group">
                                 {/* Manually sizing img for aesthetic control */}
                                 <img
                                     src={resultImage}
                                     alt="Dream Comic"
                                     className={styles.resultImage}
                                 />
+                                <a
+                                    href={resultImage}
+                                    download="dreamcatcher_comic.png"
+                                    className="absolute bottom-4 right-4 bg-white/10 hover:bg-white/20 text-white p-3 rounded-full backdrop-blur-md border border-white/20 transition-all transform hover:scale-110 shadow-lg z-50"
+                                    title="Download Comic"
+                                >
+                                    <Download size={24} />
+                                </a>
                             </div>
 
                             <div className={styles.footerLink}>
@@ -291,14 +299,7 @@ export default function DreamcatcherPage() {
                                     Explore <ArrowRight size={14} />
                                 </a>
 
-                                <div className="mt-8 flex flex-col items-center gap-4">
-                                    <a
-                                        href={resultImage}
-                                        download="dreamcatcher_comic.png"
-                                        className="text-white/60 hover:text-white underline text-sm tracking-widest uppercase"
-                                    >
-                                        Download Comic
-                                    </a>
+                                <div className="mt-8">
                                     <button onClick={reset} className="text-white/40 hover:text-white/80 transition-colors text-xs tracking-widest uppercase">
                                         Dream Again
                                     </button>
