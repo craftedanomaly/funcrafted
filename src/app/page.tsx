@@ -140,6 +140,17 @@ const GameIcons = {
       <text x="50" y="85" fontSize="16" fill="currentColor" textAnchor="middle">LINKED</text>
     </svg>
   ),
+  dreamcatcher: (
+    <svg viewBox="0 0 100 100" className="w-full h-full">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.6" />
+      <path d="M50 10 L50 90 M10 50 L90 50" stroke="currentColor" strokeWidth="1" opacity="0.2" />
+      <path d="M22 22 L78 78 M78 22 L22 78" stroke="currentColor" strokeWidth="1" opacity="0.2" />
+      <circle cx="50" cy="50" r="10" fill="currentColor" opacity="0.8" />
+      <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="5,5" />
+      <path d="M50 30 C 60 30, 70 40, 70 50" stroke="currentColor" strokeWidth="2" fill="none" />
+      <circle cx="70" cy="50" r="3" fill="currentColor" />
+    </svg>
+  ),
 };
 
 // Games array - newest first
@@ -198,6 +209,14 @@ const games = [
     icon: GameIcons.whoAmI,
     badge: "AI",
   },
+  {
+    title: "Dreamcatcher",
+    description: "Catch your dream! Turn selfies and thoughts into gothic expressionist comics.",
+    href: "/dreamcatcher",
+    gradient: "from-[#8A2BE2] to-[#FF4500]", // Purple to Orange-ish
+    icon: GameIcons.dreamcatcher,
+    badge: "New",
+  },
 ];
 
 // Track game click
@@ -207,24 +226,24 @@ function trackGameClick(href: string) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ gameId }),
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 // Uniform Game Card Component
-function GameCard({ 
-  title, 
-  description, 
-  href, 
-  gradient, 
-  icon, 
-  badge, 
-  delay = 0 
-}: { 
-  title: string; 
-  description: string; 
-  href: string; 
-  gradient: string; 
-  icon: React.ReactNode; 
+function GameCard({
+  title,
+  description,
+  href,
+  gradient,
+  icon,
+  badge,
+  delay = 0
+}: {
+  title: string;
+  description: string;
+  href: string;
+  gradient: string;
+  icon: React.ReactNode;
   badge?: string;
   delay?: number;
 }) {
@@ -247,16 +266,16 @@ function GameCard({
                 {badge}
               </div>
             )}
-            
+
             {/* SVG Icon */}
             <div className={`w-16 h-16 mb-4 text-white bg-gradient-to-br ${gradient} rounded-xl p-3`}>
               {icon}
             </div>
-            
+
             {/* Content */}
             <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
             <p className="text-sm text-gray-400 flex-1">{description}</p>
-            
+
             {/* Play button */}
             <div className="mt-4 flex items-center gap-2">
               <span className={`text-sm font-medium bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
@@ -304,12 +323,21 @@ export default function Home() {
     // Create a map of game href to game data
     const gameMap = new Map(games.map((g) => [g.href.replace("/", ""), g]));
 
-    // Sort games based on layout order and filter by visibility
-    return layout
+    // Get IDs present in layout
+    const layoutIds = new Set(layout.map(l => l.id));
+
+    // Get games that are in the layout, sorted
+    const layoutGames = layout
       .filter((item) => item.visible)
       .sort((a, b) => a.order - b.order)
       .map((item) => gameMap.get(item.id))
       .filter((g): g is (typeof games)[0] => g !== undefined);
+
+    // Get games NOT in the layout (newly added ones)
+    const newGames = games.filter(g => !layoutIds.has(g.href.replace("/", "")));
+
+    // Combine them, putting new games at the top or bottom. Let's put them at the top so they are seen.
+    return [...newGames, ...layoutGames];
   }, [layout]);
 
   return (
