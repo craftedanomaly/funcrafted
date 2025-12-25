@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { checkRateLimit } from '@/lib/firebase';
 
 // Allow extremely long timeout for retries (20s * 3 + delays)
 export const maxDuration = 60;
@@ -101,6 +102,18 @@ async function generateWithOpenAI(apiKey: string, prompt: string) {
 
 export async function POST(req: NextRequest) {
     try {
+        // --- Rate Limiting Logic ---
+        const forwardedFor = req.headers.get('x-forwarded-for');
+        let ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown_ip';
+        console.log(`[Generate] Checking Rate Limit for IP: ${ip}`);
+
+        const limitCheck = await checkRateLimit(ip);
+        if (!limitCheck.allowed) {
+            console.log(`[Generate] Rate Limit Blocked: ${ip}`);
+            return NextResponse.json({ error: limitCheck.error }, { status: 429 });
+        }
+        // --- End Rate Limiting ---
+
         const { image, prompt } = await req.json();
 
         if (!prompt) {

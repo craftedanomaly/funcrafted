@@ -183,6 +183,17 @@
     opacity: 0.8;
 }
 
+@media (max-width: 768px) {
+    .mainTitle {
+        top: 2rem;
+        font-size: 1.5rem;
+        letter-spacing: 0.2em;
+        width: 100%;
+        position: absolute;
+        /* Ensure it stays at top */
+    }
+}
+
 .input,
 .textarea {
     width: 100%;

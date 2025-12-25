@@ -546,8 +546,9 @@ export async function checkRateLimit(ip: string): Promise<{ allowed: boolean; er
     if (docSnap.exists()) {
       const data = docSnap.data();
       const count = data.count || 0;
+      console.log(`[RateLimit] IP: ${ip}, Count: ${count}, Limit: 2`);
 
-      if (count >= 3) {
+      if (count >= 2) {
         return { allowed: false, error: "How many dreams you had in one day? Come back tomorrow." };
       }
 
