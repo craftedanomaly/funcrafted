@@ -5,31 +5,13 @@ import styles from '../dream.module.css';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-
-interface Dream {
-    id: string;
-    imageUrl: string;
-    username: string;
-    createdAt: Date;
-}
+import { DreamEntry } from '@/lib/firebase';
 
 export default function GalleryPage() {
-    const [dreams, setDreams] = useState<Dream[]>([]);
+    const [dreams, setDreams] = useState<DreamEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch dreams from API wrapper since we are client side and firebase.ts is safer in server/api usually, 
-        // but we can also use a server component.
-        // For simplicity in this structure, let's make a GET route or just use a server component?
-        // Let's use a server component pattern if possible, but we are in 'use client' for animations.
-        // Actually, we can fetch from an API route to keep secrets safe if firebase.ts is server-only (which it seems to be mixed usage).
-        // To be safe, let's create a GET api route, OR just fetch directly if firebase.ts is client-safe.
-        // Checking firebase.ts again: it uses process.env.NEXT_PUBLIC_... so it is client safe.
-        // We can import getDreams directly!
-
-        // However, getDreams uses `getDocs` which is fine on client if rules allow.
-        // Let's try importing `getDreams` dynamically to avoid server/client mismatch issues if any.
-
         import('@/lib/firebase').then(async (mod) => {
             try {
                 const data = await mod.getDreams(100);
@@ -71,7 +53,7 @@ export default function GalleryPage() {
                         <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
                             {dreams.map((dream, i) => (
                                 <motion.div
-                                    key={dream.id}
+                                    key={dream.id || i}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.05 }}
